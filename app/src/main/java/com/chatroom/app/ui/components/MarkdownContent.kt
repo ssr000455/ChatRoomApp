@@ -144,6 +144,8 @@ document.getElementById('content').innerHTML = md.render(src);
         }
     }
 
+    val heightDp = with(measuredHeight.coerceIn(40, 5000)) { androidx.compose.ui.unit.dp(this.toFloat()) }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -153,7 +155,7 @@ document.getElementById('content').innerHTML = md.render(src);
             factory = { webView },
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 40.dp, max = 5000.dp)
+                .height(heightDp)
         )
     }
 }

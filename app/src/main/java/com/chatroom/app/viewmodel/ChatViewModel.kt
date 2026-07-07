@@ -13,13 +13,10 @@ import com.chatroom.app.data.model.Session
 import com.chatroom.app.data.repository.ApiAccountRepository
 import com.chatroom.app.data.repository.IdentityRepository
 import com.chatroom.app.data.repository.SessionRepository
-import com.chatroom.app.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -36,7 +33,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val sessionRepo = SessionRepository(application)
     private val apiAccountRepo = ApiAccountRepository(application)
     private val identityRepo = IdentityRepository(application)
-    private val settingsRepo = SettingsRepository(application)
     private val webSearchService = WebSearchService.createDefault()
 
     val sessions: StateFlow<List<Session>> = sessionRepo.sessions
@@ -125,12 +121,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             messages.addAll(historyMessages)
             messages.add(userMessage)
 
-            // Web search: if enabled, fetch search results and inject as context
+            // Web search: use DuckDuckGo by default, no API key needed
             if (_uiState.value.webSearchEnabled) {
                 try {
-                    val endpoint = settingsRepo.searchEndpoint.first()
-                    val apiKey = settingsRepo.searchApiKey.first()
-                    val searchResults = webSearchService.search(endpoint, apiKey, text)
+                    val searchResults = webSearchService.search(
+                        WebSearchService.DEFAULT_ENDPOINT, null, text
+                    )
                     val searchContext = ChatMessage(
                         role = "system",
                         content = "Web search results for \"$text\":\n$searchResults"

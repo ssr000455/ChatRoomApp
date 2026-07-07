@@ -1,6 +1,5 @@
 package com.chatroom.app
 
-import android.app.Activity
 import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
@@ -28,12 +27,24 @@ import com.chatroom.app.viewmodel.SettingsViewModel
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        val lang = newBase.getSharedPreferences("settings_preferences", Context.MODE_PRIVATE)
+            .getString("language", "zh-CN") ?: "zh-CN"
+        val locale = when (lang) {
+            "zh-CN" -> Locale.SIMPLIFIED_CHINESE
+            "zh-TW" -> Locale.TRADITIONAL_CHINESE
+            else -> Locale.ENGLISH
+        }
+        Locale.setDefault(locale)
+        val config = Configuration(newBase.resources.configuration)
+        config.setLocale(locale)
+        super.attachBaseContext(newBase.createConfigurationContext(config))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        // Apply saved locale
-        applyLocale(this)
 
         setContent {
             val settingsViewModel: SettingsViewModel = viewModel()
@@ -43,6 +54,13 @@ class MainActivity : ComponentActivity() {
 
             val themeMode by settingsViewModel.themeMode.collectAsState()
             val language by settingsViewModel.language.collectAsState()
+
+            // Observe recreate event for language switching
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                settingsViewModel.recreateEvent.collect {
+                    recreate()
+                }
+            }
 
             ChatRoomTheme(themeMode = themeMode) {
                 ChatRoomAppContent(
@@ -54,20 +72,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
-
-private fun applyLocale(activity: Activity) {
-    val prefs = activity.getSharedPreferences("settings_preferences", Context.MODE_PRIVATE)
-    val lang = prefs.getString("language", "zh-CN") ?: "zh-CN"
-    val locale = when (lang) {
-        "zh-CN" -> Locale.SIMPLIFIED_CHINESE
-        "zh-TW" -> Locale.TRADITIONAL_CHINESE
-        else -> Locale.ENGLISH
-    }
-    Locale.setDefault(locale)
-    val config = Configuration(activity.resources.configuration)
-    config.setLocale(locale)
-    activity.resources.updateConfiguration(config, activity.resources.displayMetrics)
 }
 
 @Composable
@@ -91,7 +95,8 @@ private fun ChatRoomAppContent(
             settingsViewModel = settingsViewModel,
             apiAccountViewModel = apiAccountViewModel,
             identityViewModel = identityViewModel,
-            onToggleSidebar = { isSidebarOpen = !isSidebarOpen }
+            onToggleSidebar = { isSidebarOpen = !isSidebarOpen },
+            onCloseSidebar = { isSidebarOpen = false }
         )
 
         // Sidebar overlay

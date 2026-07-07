@@ -28,6 +28,7 @@ fun AppNavigation(
     apiAccountViewModel: ApiAccountViewModel,
     identityViewModel: IdentityViewModel,
     onToggleSidebar: () -> Unit,
+    onCloseSidebar: () -> Unit = onToggleSidebar,
     modifier: Modifier = Modifier
 ) {
     AnimatedContent(
@@ -62,7 +63,7 @@ fun AppNavigation(
             SidebarDestination.Sessions -> SessionManagerScreen(
                 viewModel = chatViewModel,
                 onToggleSidebar = onToggleSidebar,
-                onSessionSelected = onToggleSidebar
+                onSessionSelected = onCloseSidebar
             )
             else -> ChatScreen(
                 viewModel = chatViewModel,

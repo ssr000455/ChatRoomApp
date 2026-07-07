@@ -192,43 +192,10 @@ fun SettingsScreen(
             }
             Spacer(modifier = Modifier.height(4.dp))
 
-            var showSearchKey by remember { mutableStateOf(false) }
-
-            OutlinedTextField(
-                value = searchEndpoint,
-                onValueChange = { viewModel.setSearchEndpoint(it) },
-                label = { Text(stringResource(R.string.search_endpoint)) },
-                placeholder = { Text(stringResource(R.string.search_endpoint_hint)) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = searchApiKey,
-                onValueChange = { viewModel.setSearchApiKey(it) },
-                label = { Text(stringResource(R.string.search_api_key)) },
-                placeholder = { Text(stringResource(R.string.search_api_key_hint)) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true,
-                visualTransformation = if (showSearchKey) VisualTransformation.None
-                    else PasswordVisualTransformation(),
-                trailingIcon = {
-                    IconButton(onClick = { showSearchKey = !showSearchKey }) {
-                        Icon(
-                            imageVector = if (showSearchKey) Icons.Default.VisibilityOff
-                                          else Icons.Default.Visibility,
-                            contentDescription = if (showSearchKey) stringResource(R.string.hide) else stringResource(R.string.show),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            )
             Text(
                 text = stringResource(R.string.search_desc),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 modifier = Modifier.padding(start = 4.dp, top = 4.dp)
             )
 

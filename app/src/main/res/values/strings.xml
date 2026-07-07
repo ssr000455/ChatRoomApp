@@ -59,6 +59,7 @@
     <string name="api_keys_title">API Keys</string>
     <string name="add_api_key">Add API Key</string>
     <string name="no_api_keys_hint">No API keys yet.\nAdd one to start chatting.</string>
+    <string name="api_key">API Key</string>
     <string name="api_key_label">Label</string>
     <string name="api_key_hint">sk-…</string>
     <string name="api_base_url">API Base URL</string>

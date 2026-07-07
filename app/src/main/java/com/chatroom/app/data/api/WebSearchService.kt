@@ -2,6 +2,8 @@ package com.chatroom.app.data.api
 
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 class WebSearchService {
@@ -40,7 +42,9 @@ class WebSearchService {
             requestBuilder.header("X-API-Key", apiKey)
         }
 
-        val response = client.newCall(requestBuilder.build()).execute()
+        val response = withContext(Dispatchers.IO) {
+            client.newCall(requestBuilder.build()).execute()
+        }
 
         if (!response.isSuccessful) {
             return "Search failed: HTTP ${response.code}"

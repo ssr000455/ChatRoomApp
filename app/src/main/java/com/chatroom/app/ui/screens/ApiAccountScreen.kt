@@ -182,7 +182,7 @@ private fun AddApiAccountForm(onSave: (ApiAccount) -> Unit) {
         OutlinedTextField(
             value = apiKey,
             onValueChange = { apiKey = it },
-            label = { Text(stringResource(R.string.api_key_label)) },
+            label = { Text(stringResource(R.string.api_key)) },
             placeholder = { Text(stringResource(R.string.api_key_hint)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),

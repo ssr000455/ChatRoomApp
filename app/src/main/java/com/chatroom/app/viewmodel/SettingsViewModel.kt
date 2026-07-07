@@ -1,19 +1,25 @@
 package com.chatroom.app.viewmodel
 
 import android.app.Application
-import android.content.Intent
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.chatroom.app.data.repository.SettingsRepository
 import com.chatroom.app.ui.theme.ThemeMode
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = SettingsRepository(application)
+
+    private val _recreateEvent = MutableSharedFlow<Unit>()
+    val recreateEvent: SharedFlow<Unit> = _recreateEvent.asSharedFlow()
 
     val themeMode: StateFlow<ThemeMode> = repository.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM)
@@ -42,17 +48,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setLanguage(lang: String) {
         viewModelScope.launch {
             repository.setLanguage(lang)
-            // Write to SharedPreferences for sync applyLocale() in MainActivity
+            // Write to SharedPreferences synchronously for MainActivity.attachBaseContext()
             val prefs = getApplication<Application>()
-                .getSharedPreferences("settings_preferences", 0)
-            prefs.edit().putString("language", lang).apply()
-            // Restart activity to apply locale
-            val intent = getApplication<Application>()
-                .packageManager
-                .getLaunchIntentForPackage(getApplication<Application>().packageName)
-            intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-            getApplication<Application>().startActivity(intent)
-            Runtime.getRuntime().exit(0)
+                .getSharedPreferences("settings_preferences", Context.MODE_PRIVATE)
+            prefs.edit().putString("language", lang).commit()
+            // Signal MainActivity to recreate with the new locale
+            _recreateEvent.emit(Unit)
         }
     }
 }

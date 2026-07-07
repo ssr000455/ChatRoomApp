@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -144,18 +145,16 @@ fun IdentityScreen(
                 )
             }
 
-            // Add form
-            AnimatedVisibility(
-                visible = showForm,
-                enter = fadeIn(animationSpec = tween(200)),
-                exit = fadeOut(animationSpec = tween(200))
-            ) {
-                AddIdentityForm(onSave = { viewModel.addIdentity(it) })
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (identities.isEmpty()) {
+            // Add form (scrollable) or identity list
+            if (showForm) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    AddIdentityForm(onSave = { viewModel.addIdentity(it) })
+                }
+            } else if (identities.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -169,7 +168,7 @@ fun IdentityScreen(
                     )
                 }
             } else {
-                LazyColumn {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(identities) { identity ->
                         IdentityCard(
                             identity = identity,

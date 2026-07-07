@@ -59,6 +59,7 @@
     <string name="api_keys_title">API 金鑰</string>
     <string name="add_api_key">新增 API 金鑰</string>
     <string name="no_api_keys_hint">暫無 API 金鑰。\n新增一個以開始聊天。</string>
+    <string name="api_key">API 金鑰</string>
     <string name="api_key_label">標籤</string>
     <string name="api_key_hint">sk-…</string>
     <string name="api_base_url">API 位址</string>

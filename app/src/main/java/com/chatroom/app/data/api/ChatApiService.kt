@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 
 interface ChatApiService {
 
-    @POST("v1/chat/completions")
+    @POST("chat/completions")
     suspend fun chatCompletion(
         @Header("Authorization") authorization: String,
         @Body request: ChatRequest
