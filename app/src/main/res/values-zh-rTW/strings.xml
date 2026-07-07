@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ChatRoom</string>
+
+    <!-- Sidebar -->
+    <string name="menu">選單</string>
+    <string name="new_chat">新對話</string>
+    <string name="settings">設定</string>
+    <string name="accounts">帳號</string>
+    <string name="sessions">會話</string>
+
+    <!-- Chat -->
+    <string name="input_placeholder">輸入訊息…</string>
+    <string name="send">發送</string>
+    <string name="web_search">聯網搜尋</string>
+    <string name="thinking">思考中…</string>
+    <string name="empty_chat_start">開始一段對話</string>
+
+    <!-- Settings -->
+    <string name="settings_title">設定</string>
+    <string name="theme">主題</string>
+    <string name="theme_system">跟隨系統</string>
+    <string name="theme_light">淺色</string>
+    <string name="theme_dark">深色</string>
+    <string name="language">語言</string>
+    <string name="language_zh_cn">简体中文</string>
+    <string name="language_zh_tw">繁體中文</string>
+    <string name="language_en">English</string>
+    <string name="about">關於</string>
+    <string name="version">版本</string>
+
+    <!-- Accounts -->
+    <string name="accounts_title">帳號管理</string>
+    <string name="add_account">新增帳號</string>
+    <string name="account_name">帳號名稱</string>
+    <string name="api_key">API 金鑰</string>
+    <string name="api_base_url">API 位址</string>
+    <string name="system_prompt">系統提示詞</string>
+    <string name="max_accounts_reached">已達上限，最多 10 個帳號</string>
+    <string name="delete_account">刪除帳號</string>
+    <string name="save_account">儲存帳號</string>
+
+    <!-- Sessions -->
+    <string name="sessions_title">會話歷史</string>
+    <string name="max_sessions_reached">已達上限，最多 25 個會話</string>
+    <string name="delete_session">刪除會話</string>
+    <string name="confirm_delete">確定要刪除嗎？</string>
+    <string name="cancel">取消</string>
+    <string name="confirm">確定</string>
+</resources>
