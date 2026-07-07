@@ -1,7 +1,10 @@
 package com.chatroom.app.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -208,13 +211,19 @@ fun ChatScreen(
                         .fillMaxSize()
                         .padding(vertical = 8.dp)
                 ) {
-                    items(messages) { message ->
-                        ChatBubble(
-                            message = message,
-                            isLastMessage = message == messages.lastOrNull(),
-                            onRegenerate = if (message.role == "assistant" && message == messages.lastOrNull())
-                                { viewModel.regenerateLastResponse() } else null
-                        )
+                    items(messages, key = { it.id }) { message ->
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = fadeIn(animationSpec = tween(300)) +
+                                    slideInVertically(animationSpec = tween(300)) { it / 4 }
+                        ) {
+                            ChatBubble(
+                                message = message,
+                                isLastMessage = message == messages.lastOrNull(),
+                                onRegenerate = if (message.role == "assistant" && message == messages.lastOrNull())
+                                    { viewModel.regenerateLastResponse() } else null
+                            )
+                        }
                     }
 
                     if (uiState.isSending) {
@@ -227,15 +236,21 @@ fun ChatScreen(
         }
 
         // Error display
-        uiState.error?.let { error ->
-            Text(
-                text = error,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-            )
+        AnimatedVisibility(
+            visible = uiState.error != null,
+            enter = fadeIn(animationSpec = tween(200)),
+            exit = fadeIn(animationSpec = tween(200))
+        ) {
+            uiState.error?.let { error ->
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
         }
 
         // Input area

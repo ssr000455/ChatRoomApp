@@ -10,7 +10,7 @@
     <string name="api_keys">API 金鑰</string>
     <string name="identities">虛擬身份</string>
     <string name="chat">聊天</string>
-    <string name="no_sessions">暫無會話</string>
+    <string name="no_sessions">暫無會話。\n開始新對話吧！</string>
     <string name="generating">生成中…</string>
     <string name="session_count">會話（%d/25）</string>
     <string name="delete_session_title">刪除會話</string>
@@ -93,7 +93,7 @@
     <string name="sessions_title">會話歷史</string>
     <string name="max_sessions_reached">已達上限，最多 25 個會話</string>
     <string name="delete_session">刪除會話</string>
-    <string name="confirm_delete">確定要刪除嗎？</string>
+    <string name="confirm_delete">確定要刪除此會話嗎？</string>
     <string name="cancel">取消</string>
     <string name="confirm">確定</string>
 </resources>

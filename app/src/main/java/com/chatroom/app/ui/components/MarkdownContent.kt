@@ -59,8 +59,8 @@ fun MarkdownContent(
 <script src="https://cdn.jsdelivr.net/npm/katex@$KATEX_VER/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@$HLJS_VER/build/highlight.min.js"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{margin:0;padding:8px;font-size:15px;line-height:1.6;background:transparent;color:$textColor;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow-wrap:break-word;word-break:break-word}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-user-select:text;user-select:text}
+body{margin:0;padding:8px;font-size:15px;line-height:1.6;background:transparent;color:$textColor;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow-wrap:break-word;word-break:break-word;-webkit-user-select:text;user-select:text}
 a{color:$linkColor;text-decoration:none}
 a:hover{text-decoration:underline}
 p{margin:4px 0}

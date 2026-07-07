@@ -10,7 +10,7 @@
     <string name="api_keys">API Keys</string>
     <string name="identities">Identities</string>
     <string name="chat">Chat</string>
-    <string name="no_sessions">No sessions yet</string>
+    <string name="no_sessions">No sessions yet.\nStart a new chat!</string>
     <string name="generating">generating…</string>
     <string name="session_count">Sessions (%d/25)</string>
     <string name="delete_session_title">Delete Session</string>
@@ -93,7 +93,7 @@
     <string name="sessions_title">Session History</string>
     <string name="max_sessions_reached">Maximum 25 sessions reached</string>
     <string name="delete_session">Delete Session</string>
-    <string name="confirm_delete">Are you sure you want to delete this?</string>
+    <string name="confirm_delete">Are you sure you want to delete this session?</string>
     <string name="cancel">Cancel</string>
     <string name="confirm">Confirm</string>
 </resources>

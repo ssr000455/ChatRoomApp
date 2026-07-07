@@ -39,9 +39,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.chatroom.app.R
 import com.chatroom.app.data.model.Session
 import com.chatroom.app.viewmodel.ChatViewModel
 import java.text.SimpleDateFormat
@@ -78,14 +80,14 @@ fun SessionManagerScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Menu,
-                    contentDescription = "Menu",
+                    contentDescription = stringResource(R.string.menu),
                     tint = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.size(26.dp)
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Sessions",
+                text = stringResource(R.string.sessions_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -106,7 +108,7 @@ fun SessionManagerScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No sessions yet.\nStart a new chat!",
+                    text = stringResource(R.string.no_sessions),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                 )
@@ -215,7 +217,7 @@ private fun SessionCard(
         ) {
             Icon(
                 imageVector = Icons.Default.Delete,
-                contentDescription = "Delete",
+                contentDescription = stringResource(R.string.delete_session),
                 tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
                 modifier = Modifier.size(20.dp)
             )
@@ -225,19 +227,19 @@ private fun SessionCard(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Session") },
-            text = { Text("Are you sure you want to delete this session?") },
+            title = { Text(stringResource(R.string.delete_session_title)) },
+            text = { Text(stringResource(R.string.confirm_delete)) },
             confirmButton = {
                 TextButton(onClick = {
                     onDelete()
                     showDeleteDialog = false
                 }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete_session), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
