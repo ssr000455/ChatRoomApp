@@ -7,6 +7,8 @@ data class ApiAccount(
     val name: String,
     val apiKey: String = "",
     val apiBaseUrl: String = "https://api.openai.com/v1",
+    val model: String = "gpt-4o",
+    val reasoningModel: String = "o1-mini",
     val isActive: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )

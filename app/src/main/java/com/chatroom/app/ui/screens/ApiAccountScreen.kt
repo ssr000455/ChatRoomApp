@@ -163,6 +163,8 @@ private fun AddApiAccountForm(onSave: (ApiAccount) -> Unit) {
     var name by remember { mutableStateOf("") }
     var apiKey by remember { mutableStateOf("") }
     var apiBaseUrl by remember { mutableStateOf("https://api.openai.com/v1") }
+    var model by remember { mutableStateOf("gpt-4o") }
+    var reasoningModel by remember { mutableStateOf("o1-mini") }
 
     Column(
         modifier = Modifier
@@ -198,9 +200,29 @@ private fun AddApiAccountForm(onSave: (ApiAccount) -> Unit) {
             shape = RoundedCornerShape(12.dp),
             singleLine = true
         )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = model,
+            onValueChange = { model = it },
+            label = { Text(stringResource(R.string.model_label)) },
+            placeholder = { Text(stringResource(R.string.model_placeholder)) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = reasoningModel,
+            onValueChange = { reasoningModel = it },
+            label = { Text(stringResource(R.string.reasoning_model_label)) },
+            placeholder = { Text(stringResource(R.string.reasoning_model_placeholder)) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
         Spacer(modifier = Modifier.height(12.dp))
         Button(
-            onClick = { onSave(ApiAccount(name = name, apiKey = apiKey, apiBaseUrl = apiBaseUrl)) },
+            onClick = { onSave(ApiAccount(name = name, apiKey = apiKey, apiBaseUrl = apiBaseUrl, model = model, reasoningModel = reasoningModel)) },
             enabled = name.isNotBlank() && apiKey.isNotBlank(),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(14.dp)

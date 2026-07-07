@@ -146,7 +146,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val api = ChatApiService.create(apiAccount.apiBaseUrl)
 
                 // Use reasoning model when deep thinking is enabled
-                val model = if (session.deepThinkingEnabled) "o1-mini" else "gpt-4o"
+                val model = if (session.deepThinkingEnabled) apiAccount.reasoningModel else apiAccount.model
                 val reasoningEffort = if (session.deepThinkingEnabled) "high" else null
 
                 val request = ChatRequest(
@@ -214,7 +214,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
             try {
                 val api = ChatApiService.create(apiAccount.apiBaseUrl)
-                val model = if (session.deepThinkingEnabled) "o1-mini" else "gpt-4o"
+                val model = if (session.deepThinkingEnabled) apiAccount.reasoningModel else apiAccount.model
                 val reasoningEffort = if (session.deepThinkingEnabled) "high" else null
 
                 val request = ChatRequest(

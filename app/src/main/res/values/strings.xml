@@ -63,6 +63,10 @@
     <string name="api_key_label">Label</string>
     <string name="api_key_hint">sk-…</string>
     <string name="api_base_url">API Base URL</string>
+    <string name="model_label">Model</string>
+    <string name="model_placeholder">e.g. gpt-4o, claude-3-opus, gemini-pro</string>
+    <string name="reasoning_model_label">Reasoning Model (deep thinking)</string>
+    <string name="reasoning_model_placeholder">e.g. o1-mini, o1-preview</string>
     <string name="delete_api_key">Delete</string>
     <string name="save_api_key">Save</string>
     <string name="copy_code">Copy code</string>

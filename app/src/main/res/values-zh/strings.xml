@@ -63,6 +63,10 @@
     <string name="api_key_label">标签</string>
     <string name="api_key_hint">sk-…</string>
     <string name="api_base_url">API 地址</string>
+    <string name="model_label">模型</string>
+    <string name="model_placeholder">例如 gpt-4o, claude-3-opus, gemini-pro</string>
+    <string name="reasoning_model_label">推理模型（深度思考）</string>
+    <string name="reasoning_model_placeholder">例如 o1-mini, o1-preview, deepseek-r1</string>
     <string name="delete_api_key">删除</string>
     <string name="save_api_key">保存</string>
     <string name="copy_code">复制代码</string>
