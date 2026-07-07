@@ -1,6 +1,7 @@
 package com.chatroom.app
 
 import android.app.Activity
+import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -56,7 +57,7 @@ class MainActivity : ComponentActivity() {
 }
 
 private fun applyLocale(activity: Activity) {
-    val prefs = activity.getSharedPreferences("settings_preferences", MODE_PRIVATE)
+    val prefs = activity.getSharedPreferences("settings_preferences", Context.MODE_PRIVATE)
     val lang = prefs.getString("language", "zh-CN") ?: "zh-CN"
     val locale = when (lang) {
         "zh-CN" -> Locale.SIMPLIFIED_CHINESE

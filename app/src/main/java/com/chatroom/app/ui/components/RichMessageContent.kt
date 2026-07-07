@@ -84,7 +84,7 @@ fun RichMessageContent(
                 }
 
                 is Segment.BlockMath -> {
-                    LatexBlock(content = segment.content)
+                    LatexBlock(latex = segment.content)
                     currentIndex++
                 }
 

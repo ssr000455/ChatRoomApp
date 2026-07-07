@@ -43,10 +43,10 @@ class WebSearchService {
         val response = client.newCall(requestBuilder.build()).execute()
 
         if (!response.isSuccessful) {
-            return "Search failed: HTTP ${response.code()}"
+            return "Search failed: HTTP ${response.code}"
         }
 
-        val body = response.body()?.string() ?: return "No search results"
+        val body = response.body?.string() ?: return "No search results"
         return formatSearchResults(body)
     }
 

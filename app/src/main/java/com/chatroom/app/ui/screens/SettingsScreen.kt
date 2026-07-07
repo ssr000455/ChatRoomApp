@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.GitHub
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LightMode
@@ -76,6 +75,7 @@ fun SettingsScreen(
     val language by viewModel.language.collectAsState()
     val searchEndpoint by viewModel.searchEndpoint.collectAsState()
     val searchApiKey by viewModel.searchApiKey.collectAsState()
+    val context = LocalContext.current
 
     Column(
         modifier = modifier
@@ -269,7 +269,6 @@ fun SettingsScreen(
                 label = stringResource(R.string.about_repository),
                 value = "ssr000455/ChatRoomApp",
                 onClick = {
-                    val context = LocalContext.current
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/ssr000455/ChatRoomApp"))
                     context.startActivity(intent)
                 }
@@ -277,7 +276,7 @@ fun SettingsScreen(
             AboutItem(
                 icon = Icons.Default.Build,
                 label = stringResource(R.string.version),
-                value = getVersionInfo(LocalContext.current)
+                value = getVersionInfo(context)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -285,7 +284,6 @@ fun SettingsScreen(
             // Check updates button
             Button(
                 onClick = {
-                    val context = LocalContext.current
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/ssr000455/ChatRoomApp/releases"))
                     context.startActivity(intent)
                 },
@@ -308,7 +306,6 @@ fun SettingsScreen(
 
             OutlinedButton(
                 onClick = {
-                    val context = LocalContext.current
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/ssr000455/ChatRoomApp"))
                     context.startActivity(intent)
                 },
@@ -316,7 +313,7 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(14.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.GitHub,
+                    imageVector = Icons.Default.Code,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp)
                 )

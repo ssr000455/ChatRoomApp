@@ -139,12 +139,12 @@ fun ChatBubble(
                     horizontalArrangement = Arrangement.Start
                 ) {
                     // Copy button
-                    var showCopied by remember { mutableStateOf(false) }
+                    val copiedText = stringResource(R.string.copied_toast)
                     IconButton(
                         onClick = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             clipboard.setPrimaryClip(ClipData.newPlainText("message", message.content))
-                            Toast.makeText(context, stringResource(R.string.copied_toast), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, copiedText, Toast.LENGTH_SHORT).show()
                         },
                         modifier = Modifier.size(28.dp)
                     ) {
