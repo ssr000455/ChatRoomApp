@@ -41,7 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -59,7 +59,7 @@ fun ChatScreen(
     val uiState by viewModel.uiState.collectAsState()
     val activeSession by viewModel.activeSession.collectAsState()
     val activeAccount by viewModel.activeAccount.collectAsState()
-    val keyboardController = LocalSoftwareKeyboardController.current()
+    val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
 
     // Auto-scroll to bottom
@@ -217,7 +217,7 @@ fun ChatScreen(
                     keyboardActions = KeyboardActions(
                         onSend = {
                             viewModel.sendMessage()
-                            keyboardController?.hide()
+                            focusManager.clearFocus()
                         }
                     ),
                     singleLine = true
@@ -237,7 +237,7 @@ fun ChatScreen(
                 IconButton(
                     onClick = {
                         viewModel.sendMessage()
-                        keyboardController?.hide()
+                        focusManager.clearFocus()
                     },
                     enabled = uiState.inputText.isNotBlank() && !uiState.isSending,
                     modifier = Modifier
