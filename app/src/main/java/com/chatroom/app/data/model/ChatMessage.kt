@@ -4,7 +4,15 @@ import com.google.gson.annotations.SerializedName
 
 data class ChatMessage(
     val role: String,  // "user", "assistant", "system"
-    val content: String
+    val content: String,
+    val attachments: List<Attachment> = emptyList()
+)
+
+data class Attachment(
+    val name: String,
+    val type: String,  // "image", "file", "url"
+    val url: String,
+    val size: Long = 0
 )
 
 data class ChatRequest(
@@ -13,7 +21,9 @@ data class ChatRequest(
     val temperature: Double = 0.7,
     @SerializedName("max_tokens")
     val maxTokens: Int = 4096,
-    val stream: Boolean = false
+    val stream: Boolean = false,
+    @SerializedName("reasoning_effort")
+    val reasoningEffort: String? = null
 )
 
 data class ChatResponse(

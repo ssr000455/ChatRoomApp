@@ -6,15 +6,28 @@
     <string name="menu">選單</string>
     <string name="new_chat">新對話</string>
     <string name="settings">設定</string>
-    <string name="accounts">帳號</string>
     <string name="sessions">會話</string>
+    <string name="api_keys">API 金鑰</string>
+    <string name="identities">虛擬身份</string>
+    <string name="chat">聊天</string>
+    <string name="no_sessions">暫無會話</string>
+    <string name="generating">生成中…</string>
+    <string name="session_count">會話（%d/25）</string>
+    <string name="delete_session_title">刪除會話</string>
+    <string name="delete_session_message">確定要刪除\"%s\"嗎？此操作無法復原。</string>
 
     <!-- Chat -->
     <string name="input_placeholder">輸入訊息…</string>
     <string name="send">發送</string>
+    <string name="deep_thinking">深度思考</string>
     <string name="web_search">聯網搜尋</string>
     <string name="thinking">思考中…</string>
     <string name="empty_chat_start">開始一段對話</string>
+    <string name="no_api_key_hint">請在側邊欄添加 API 金鑰後開始</string>
+    <string name="ai_label">AI</string>
+    <string name="copy">複製</string>
+    <string name="regenerate">重新生成</string>
+    <string name="copied_toast">已複製！</string>
 
     <!-- Settings -->
     <string name="settings_title">設定</string>
@@ -28,17 +41,53 @@
     <string name="language_en">English</string>
     <string name="about">關於</string>
     <string name="version">版本</string>
+    <string name="about_author">作者</string>
+    <string name="about_email">郵箱</string>
+    <string name="about_repository">倉庫</string>
+    <string name="check_updates">檢查更新</string>
+    <string name="open_repo_page">打開倉庫主頁</string>
 
-    <!-- Accounts -->
-    <string name="accounts_title">帳號管理</string>
-    <string name="add_account">新增帳號</string>
-    <string name="account_name">帳號名稱</string>
-    <string name="api_key">API 金鑰</string>
+    <!-- Web Search -->
+    <string name="web_search_title">聯網搜尋</string>
+    <string name="search_endpoint">搜尋 API 地址</string>
+    <string name="search_endpoint_hint">https://api.duckduckgo.com/?q={query}&amp;format=json</string>
+    <string name="search_api_key">搜尋 API 金鑰（可選）</string>
+    <string name="search_api_key_hint">留空則使用 DuckDuckGo</string>
+    <string name="search_desc">用 {query} 作為佔位符。預設使用 DuckDuckGo（無需金鑰）。</string>
+
+    <!-- API Keys -->
+    <string name="api_keys_title">API 金鑰</string>
+    <string name="add_api_key">新增 API 金鑰</string>
+    <string name="no_api_keys_hint">暫無 API 金鑰。\n新增一個以開始聊天。</string>
+    <string name="api_key_label">標籤</string>
+    <string name="api_key_hint">sk-…</string>
     <string name="api_base_url">API 位址</string>
-    <string name="system_prompt">系統提示詞</string>
-    <string name="max_accounts_reached">已達上限，最多 10 個帳號</string>
-    <string name="delete_account">刪除帳號</string>
-    <string name="save_account">儲存帳號</string>
+    <string name="delete_api_key">刪除</string>
+    <string name="save_api_key">儲存</string>
+    <string name="copy_code">複製程式碼</string>
+    <string name="copied">已複製！</string>
+
+    <!-- Common -->
+    <string name="close">關閉</string>
+    <string name="active">目前</string>
+    <string name="hide">隱藏</string>
+    <string name="show">顯示</string>
+    <string name="change_photo">更換</string>
+
+    <!-- Identities -->
+    <string name="identities_title">虛擬身份</string>
+    <string name="new_identity">新建身份</string>
+    <string name="identity_name">名稱 *</string>
+    <string name="identity_description">身份描述</string>
+    <string name="identity_personality">性格特徵</string>
+    <string name="identity_knowledge">知識領域</string>
+    <string name="identity_tone">交流風格</string>
+    <string name="identity_extra">額外備註</string>
+    <string name="create_identity">建立身份</string>
+    <string name="delete_identity">刪除</string>
+    <string name="max_identities">最多 10 個身份</string>
+    <string name="add_photo">添加頭像</string>
+    <string name="no_identities_hint">暫無身份。\n建立一個來個人化你的AI。</string>
 
     <!-- Sessions -->
     <string name="sessions_title">會話歷史</string>

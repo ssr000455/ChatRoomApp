@@ -5,10 +5,12 @@ import java.util.UUID
 data class Session(
     val id: String = UUID.randomUUID().toString(),
     val title: String = "New Chat",
-    val accountId: String = "",
+    val apiAccountId: String = "",
+    val identityId: String = "",
     val messages: List<ChatMessage> = emptyList(),
     val systemPrompt: String = "You are a helpful assistant.",
     val webSearchEnabled: Boolean = false,
+    val deepThinkingEnabled: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 ) {

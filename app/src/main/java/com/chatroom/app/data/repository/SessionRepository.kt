@@ -106,6 +106,25 @@ class SessionRepository(private val context: Context) {
         }
     }
 
+    suspend fun removeMessageAtIndex(sessionId: String, index: Int): Result<Unit> = runCatching {
+        val current = sessions.first().toMutableList()
+        val sIdx = current.indexOfFirst { it.id == sessionId }
+        if (sIdx < 0) throw IllegalStateException("Session not found")
+
+        val session = current[sIdx]
+        val newMessages = session.messages.toMutableList()
+        if (index < 0 || index >= newMessages.size) throw IndexOutOfBoundsException("Message index $index out of bounds")
+        newMessages.removeAt(index)
+
+        current[sIdx] = session.copy(
+            messages = newMessages,
+            updatedAt = System.currentTimeMillis()
+        )
+        context.sessionDataStore.edit { prefs ->
+            prefs[SESSIONS_KEY] = gson.toJson(current)
+        }
+    }
+
     suspend fun canCreateSession(): Boolean {
         return sessions.first().size < MAX_SESSIONS
     }

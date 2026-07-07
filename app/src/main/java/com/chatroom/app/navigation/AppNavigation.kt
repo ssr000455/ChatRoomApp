@@ -10,27 +10,23 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.chatroom.app.ui.components.SidebarDestination
-import com.chatroom.app.ui.screens.AccountManagerScreen
+import com.chatroom.app.ui.screens.ApiAccountScreen
 import com.chatroom.app.ui.screens.ChatScreen
+import com.chatroom.app.ui.screens.IdentityScreen
 import com.chatroom.app.ui.screens.SessionManagerScreen
 import com.chatroom.app.ui.screens.SettingsScreen
-import com.chatroom.app.viewmodel.AccountViewModel
+import com.chatroom.app.viewmodel.ApiAccountViewModel
 import com.chatroom.app.viewmodel.ChatViewModel
+import com.chatroom.app.viewmodel.IdentityViewModel
 import com.chatroom.app.viewmodel.SettingsViewModel
-
-sealed class Screen {
-    data object Chat : Screen()
-    data object Settings : Screen()
-    data object Accounts : Screen()
-    data object Sessions : Screen()
-}
 
 @Composable
 fun AppNavigation(
     currentDestination: SidebarDestination,
     chatViewModel: ChatViewModel,
     settingsViewModel: SettingsViewModel,
-    accountViewModel: AccountViewModel,
+    apiAccountViewModel: ApiAccountViewModel,
+    identityViewModel: IdentityViewModel,
     onToggleSidebar: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -55,14 +51,22 @@ fun AppNavigation(
                 viewModel = settingsViewModel,
                 onToggleSidebar = onToggleSidebar
             )
-            SidebarDestination.Accounts -> AccountManagerScreen(
-                viewModel = accountViewModel,
+            SidebarDestination.ApiKeys -> ApiAccountScreen(
+                viewModel = apiAccountViewModel,
+                onToggleSidebar = onToggleSidebar
+            )
+            SidebarDestination.Identities -> IdentityScreen(
+                viewModel = identityViewModel,
                 onToggleSidebar = onToggleSidebar
             )
             SidebarDestination.Sessions -> SessionManagerScreen(
                 viewModel = chatViewModel,
                 onToggleSidebar = onToggleSidebar,
                 onSessionSelected = onToggleSidebar
+            )
+            else -> ChatScreen(
+                viewModel = chatViewModel,
+                onToggleSidebar = onToggleSidebar
             )
         }
     }

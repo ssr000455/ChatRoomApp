@@ -17,10 +17,13 @@ class SettingsRepository(private val context: Context) {
     companion object {
         private val THEME_MODE_KEY = intPreferencesKey("theme_mode")
         private val LANGUAGE_KEY = stringPreferencesKey("language")
+        private val SEARCH_ENDPOINT_KEY = stringPreferencesKey("search_endpoint")
+        private val SEARCH_API_KEY_KEY = stringPreferencesKey("search_api_key")
 
         const val LANGUAGE_ZH_CN = "zh-CN"
         const val LANGUAGE_ZH_TW = "zh-TW"
         const val LANGUAGE_EN = "en"
+        const val DEFAULT_SEARCH_ENDPOINT = "https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1"
     }
 
     val themeMode: Flow<ThemeMode> = context.settingsDataStore.data.map { prefs ->
@@ -33,6 +36,14 @@ class SettingsRepository(private val context: Context) {
 
     val language: Flow<String> = context.settingsDataStore.data.map { prefs ->
         prefs[LANGUAGE_KEY] ?: LANGUAGE_ZH_CN
+    }
+
+    val searchEndpoint: Flow<String> = context.settingsDataStore.data.map { prefs ->
+        prefs[SEARCH_ENDPOINT_KEY] ?: DEFAULT_SEARCH_ENDPOINT
+    }
+
+    val searchApiKey: Flow<String> = context.settingsDataStore.data.map { prefs ->
+        prefs[SEARCH_API_KEY_KEY] ?: ""
     }
 
     suspend fun setThemeMode(mode: ThemeMode) {
@@ -53,5 +64,17 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun getCurrentLanguage(): String {
         return context.settingsDataStore.data.first()[LANGUAGE_KEY] ?: LANGUAGE_ZH_CN
+    }
+
+    suspend fun setSearchEndpoint(endpoint: String) {
+        context.settingsDataStore.edit { prefs ->
+            prefs[SEARCH_ENDPOINT_KEY] = endpoint
+        }
+    }
+
+    suspend fun setSearchApiKey(apiKey: String) {
+        context.settingsDataStore.edit { prefs ->
+            prefs[SEARCH_API_KEY_KEY] = apiKey
+        }
     }
 }
