@@ -73,11 +73,15 @@ fun ChatScreen(
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
 
-    // Auto-scroll to bottom
+    // Auto-scroll to bottom only if user is near the bottom
     val messages = activeSession?.messages ?: emptyList()
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()
+            val nearBottom = lastVisible != null && lastVisible.index >= messages.size - 3
+            if (nearBottom) {
+                listState.scrollToItem(messages.size - 1)
+            }
         }
     }
 

@@ -9,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,10 +54,9 @@ class MainActivity : ComponentActivity() {
             val identityViewModel: IdentityViewModel = viewModel()
 
             val themeMode by settingsViewModel.themeMode.collectAsState()
-            val language by settingsViewModel.language.collectAsState()
 
             // Observe recreate event for language switching
-            androidx.compose.runtime.LaunchedEffect(Unit) {
+            LaunchedEffect(Unit) {
                 settingsViewModel.recreateEvent.collect {
                     recreate()
                 }

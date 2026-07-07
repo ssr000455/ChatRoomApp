@@ -13,10 +13,12 @@ import com.chatroom.app.data.model.Session
 import com.chatroom.app.data.repository.ApiAccountRepository
 import com.chatroom.app.data.repository.IdentityRepository
 import com.chatroom.app.data.repository.SessionRepository
+import com.chatroom.app.util.AppLogger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -95,14 +97,37 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val text = _uiState.value.inputText.trim()
         if (text.isEmpty() || _uiState.value.isSending) return
 
-        val session = activeSession.value ?: run {
-            viewModelScope.launch { createNewSession() }
-            return
-        }
-        val apiAccount = activeApiAccount.value ?: return
+        AppLogger.d("ChatVM", "sendMessage: len=${text.length}")
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(inputText = "", isSending = true, error = null)
+
+            // Ensure we have an active session (create one if needed)
+            var session = activeSession.value
+            if (session == null) {
+                AppLogger.d("ChatVM", "No active session, creating new one")
+                val apiAccount = activeApiAccount.value
+                if (apiAccount == null) {
+                    AppLogger.e("ChatVM", "No API account configured")
+                    _uiState.value = _uiState.value.copy(isSending = false, error = "No API account configured")
+                    return@launch
+                }
+                val identity = activeIdentity.value
+                val systemPrompt = identity?.toSystemPrompt() ?: "You are a helpful assistant."
+                session = Session(
+                    apiAccountId = apiAccount.id,
+                    identityId = identity?.id ?: "",
+                    systemPrompt = systemPrompt,
+                    webSearchEnabled = _uiState.value.webSearchEnabled,
+                    deepThinkingEnabled = _uiState.value.deepThinkingEnabled
+                )
+                sessionRepo.createSession(session)
+            }
+
+            val apiAccount = activeApiAccount.value ?: run {
+                _uiState.value = _uiState.value.copy(isSending = false, error = "No API account configured")
+                return@launch
+            }
 
             val userMessage = ChatMessage(role = "user", content = text)
 
@@ -149,6 +174,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val model = if (session.deepThinkingEnabled) apiAccount.reasoningModel else apiAccount.model
                 val reasoningEffort = if (session.deepThinkingEnabled) "high" else null
 
+                AppLogger.d("ChatVM", "API call: model=$model, url=${apiAccount.apiBaseUrl}")
                 val request = ChatRequest(
                     model = model,
                     messages = messages,
@@ -159,6 +185,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     authorization = "Bearer ${apiAccount.apiKey}",
                     request = request
                 )
+                AppLogger.d("ChatVM", "API response: code=${response.code()}")
 
                 if (response.isSuccessful) {
                     val aiMessage = response.body()?.choices?.firstOrNull()?.message
@@ -168,17 +195,21 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     sessionRepo.addMessageToSession(session.id, aiMessage)
 
                     // Update session title from first message
-                    if (session.messages.isEmpty()) {
+                    // Use session from repo (has messages) instead of local session (empty for new sessions)
+                    val currentSession = sessionRepo.activeSession.first()
+                    if (currentSession?.messages?.isEmpty() == true) {
                         val title = if (text.length > 30) text.take(30) + "…" else text
-                        sessionRepo.updateSession(session.copy(title = title))
+                        sessionRepo.updateSession(currentSession.copy(title = title))
                     }
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                    AppLogger.e("ChatVM", "API error: ${response.code()} - $errorBody")
                     _uiState.value = _uiState.value.copy(
                         error = "API Error: ${response.code()} - $errorBody"
                     )
                 }
             } catch (e: Exception) {
+                AppLogger.e("ChatVM", "Network error", e)
                 _uiState.value = _uiState.value.copy(
                     error = "Network Error: ${e.message ?: "Connection failed"}"
                 )
@@ -189,6 +220,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun regenerateLastResponse() {
+        AppLogger.d("ChatVM", "regenerateLastResponse")
         val session = activeSession.value ?: return
         val apiAccount = activeApiAccount.value ?: return
         val messages = session.messages
@@ -217,6 +249,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val model = if (session.deepThinkingEnabled) apiAccount.reasoningModel else apiAccount.model
                 val reasoningEffort = if (session.deepThinkingEnabled) "high" else null
 
+                AppLogger.d("ChatVM", "Regen API call: model=$model, url=${apiAccount.apiBaseUrl}")
                 val request = ChatRequest(
                     model = model,
                     messages = msgList,
@@ -240,11 +273,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     sessionRepo.addMessageToSession(session.id, aiMessage)
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                    AppLogger.e("ChatVM", "API error: ${response.code()} - $errorBody")
                     _uiState.value = _uiState.value.copy(
                         error = "API Error: ${response.code()} - $errorBody"
                     )
                 }
             } catch (e: Exception) {
+                AppLogger.e("ChatVM", "Network error", e)
                 _uiState.value = _uiState.value.copy(
                     error = "Network Error: ${e.message ?: "Connection failed"}"
                 )
