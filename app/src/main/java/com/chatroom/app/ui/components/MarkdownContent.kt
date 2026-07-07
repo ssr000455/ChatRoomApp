@@ -9,7 +9,7 @@ import android.webkit.WebViewClient
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -144,7 +144,7 @@ document.getElementById('content').innerHTML = md.render(src);
         }
     }
 
-    val heightDp = with(measuredHeight.coerceIn(40, 5000)) { androidx.compose.ui.unit.dp(this.toFloat()) }
+    val heightDp = measuredHeight.coerceIn(40, 5000).dp
 
     Box(
         modifier = modifier
