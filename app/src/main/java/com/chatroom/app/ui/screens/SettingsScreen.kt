@@ -241,15 +241,17 @@ fun SettingsScreen(
             Row(modifier = Modifier.fillMaxWidth()) {
                 Button(
                     onClick = {
+                        val exportingStr = context.getString(R.string.exporting)
+                        val failedStr = context.getString(R.string.backup_failed)
                         scope.launch {
-                            backupStatus = stringResource(R.string.exporting)
+                            backupStatus = exportingStr
                             val result = backupManager.exportBackup()
                             result.onSuccess { msg ->
                                 backupStatus = msg
                                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                             }.onFailure { e ->
-                                backupStatus = stringResource(R.string.backup_failed) + ": ${e.message}"
-                                Toast.makeText(context, stringResource(R.string.backup_failed), Toast.LENGTH_SHORT).show()
+                                backupStatus = "$failedStr: ${e.message}"
+                                Toast.makeText(context, failedStr, Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
@@ -269,15 +271,17 @@ fun SettingsScreen(
 
                 OutlinedButton(
                     onClick = {
+                        val importingStr = context.getString(R.string.importing)
+                        val failedStr = context.getString(R.string.import_failed)
                         scope.launch {
-                            backupStatus = stringResource(R.string.importing)
+                            backupStatus = importingStr
                             val result = backupManager.importBackup()
                             result.onSuccess { msg ->
                                 backupStatus = msg
                                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                             }.onFailure { e ->
-                                backupStatus = stringResource(R.string.import_failed) + ": ${e.message}"
-                                Toast.makeText(context, stringResource(R.string.import_failed), Toast.LENGTH_SHORT).show()
+                                backupStatus = "$failedStr: ${e.message}"
+                                Toast.makeText(context, failedStr, Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
