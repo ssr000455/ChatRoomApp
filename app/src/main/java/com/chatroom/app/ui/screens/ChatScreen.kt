@@ -303,33 +303,15 @@ fun ChatScreen(
             }
 
             // Scroll-to-bottom floating button
-            AnimatedVisibility(
+            ScrollToBottomFab(
                 visible = showScrollToBottom,
-                enter = fadeIn(animationSpec = tween(200)),
-                exit = fadeOut(animationSpec = tween(200)),
+                onClick = {
+                    scope.launch {
+                        listState.animateScrollToItem(messages.size - 1)
+                    }
+                },
                 modifier = Modifier.align(Alignment.BottomEnd)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .padding(end = 16.dp, bottom = 8.dp)
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                        .clickable {
-                            scope.launch {
-                                listState.animateScrollToItem(messages.size - 1)
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Scroll to bottom",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
+            )
         }
 
         // Error display
@@ -676,6 +658,36 @@ fun ChatScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ScrollToBottomFab(
+    visible: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(200)),
+        exit = fadeOut(animationSpec = tween(200))
+    ) {
+        Box(
+            modifier = modifier
+                .padding(end = 16.dp, bottom = 8.dp)
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = "Scroll to bottom",
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }
