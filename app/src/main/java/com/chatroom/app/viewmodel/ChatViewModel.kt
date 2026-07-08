@@ -7,10 +7,14 @@ import com.chatroom.app.data.api.ChatApiService
 import com.chatroom.app.data.api.WebSearchService
 import com.chatroom.app.data.api.searchWithSources
 import com.chatroom.app.data.model.ApiAccount
+import com.chatroom.app.data.model.ChangeStatus
 import com.chatroom.app.data.model.ChatMessage
 import com.chatroom.app.data.model.ChatRequest
+import com.chatroom.app.data.model.FileChange
 import com.chatroom.app.data.model.Identity
 import com.chatroom.app.data.model.Session
+import com.chatroom.app.data.model.SessionMode
+import com.chatroom.app.data.model.SessionType
 import com.chatroom.app.data.repository.ApiAccountRepository
 import com.chatroom.app.data.repository.IdentityRepository
 import com.chatroom.app.data.repository.SessionRepository
@@ -63,6 +67,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val activeIdentity: StateFlow<Identity?> = identityRepo.activeIdentity
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    val apiAccounts: StateFlow<List<ApiAccount>> = apiAccountRepo.accounts
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
@@ -107,6 +114,105 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteSession(sessionId: String) {
         viewModelScope.launch {
             sessionRepo.deleteSession(sessionId)
+        }
+    }
+
+    fun createCodingAssistantSession(
+        apiAccountId: String,
+        systemPrompt: String = "You are an expert coding assistant.",
+        repoUrl: String = "",
+        repoOwner: String = "",
+        repoName: String = ""
+    ) {
+        viewModelScope.launch {
+            val session = Session(
+                title = if (repoName.isNotBlank()) repoName else "Coding Assistant",
+                type = SessionType.CODING_ASSISTANT,
+                mode = SessionMode.CHAT,
+                apiAccountId = apiAccountId,
+                systemPrompt = systemPrompt,
+                repoUrl = repoUrl,
+                repoOwner = repoOwner,
+                repoName = repoName,
+                repoBranch = "main"
+            )
+            sessionRepo.createSession(session)
+        }
+    }
+
+    fun setSessionMode(sessionId: String, mode: SessionMode) {
+        viewModelScope.launch {
+            val session = sessionRepo.activeSession.first() ?: return@launch
+            if (session.id != sessionId) {
+                sessionRepo.setActiveSession(sessionId)
+            }
+            val updated = sessionRepo.activeSession.first() ?: return@launch
+            sessionRepo.updateSession(updated.copy(mode = mode))
+        }
+    }
+
+    // ── Change Review Methods ──
+
+    fun acceptAllChanges() {
+        viewModelScope.launch {
+            val session = sessionRepo.activeSession.first() ?: return@launch
+            val updated = session.copy(
+                pendingChanges = session.pendingChanges.map {
+                    if (it.status == ChangeStatus.PENDING) it.copy(status = ChangeStatus.ACCEPTED)
+                    else it
+                }
+            )
+            sessionRepo.updateSession(updated)
+        }
+    }
+
+    fun rejectAllChanges() {
+        viewModelScope.launch {
+            val session = sessionRepo.activeSession.first() ?: return@launch
+            val updated = session.copy(
+                pendingChanges = session.pendingChanges.map {
+                    if (it.status == ChangeStatus.PENDING) it.copy(status = ChangeStatus.REJECTED)
+                    else it
+                }
+            )
+            sessionRepo.updateSession(updated)
+        }
+    }
+
+    fun acceptChange(changeId: String) {
+        viewModelScope.launch {
+            val session = sessionRepo.activeSession.first() ?: return@launch
+            val updated = session.copy(
+                pendingChanges = session.pendingChanges.map {
+                    if (it.id == changeId) it.copy(status = ChangeStatus.ACCEPTED) else it
+                }
+            )
+            sessionRepo.updateSession(updated)
+        }
+    }
+
+    fun rejectChange(changeId: String) {
+        viewModelScope.launch {
+            val session = sessionRepo.activeSession.first() ?: return@launch
+            val updated = session.copy(
+                pendingChanges = session.pendingChanges.map {
+                    if (it.id == changeId) it.copy(status = ChangeStatus.REJECTED) else it
+                }
+            )
+            sessionRepo.updateSession(updated)
+        }
+    }
+
+    fun commitChanges(commitMessage: String) {
+        viewModelScope.launch {
+            val session = sessionRepo.activeSession.first() ?: return@launch
+            // TODO: actual git commit via TerminalSession
+            AppLogger.d("ChatViewModel", "Commit: $commitMessage")
+            // Clear accepted changes after commit
+            val remaining = session.pendingChanges.filter {
+                it.status != ChangeStatus.ACCEPTED
+            }
+            sessionRepo.updateSession(session.copy(pendingChanges = remaining))
         }
     }
 

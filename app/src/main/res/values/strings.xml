@@ -144,4 +144,58 @@
     <string name="cancel">Cancel</string>
     <string name="confirm">Confirm</string>
     <string name="messages_label">messages</string>
+
+    <!-- Coding Assistant -->
+    <string name="coding_assistant">Coding Assistant</string>
+    <string name="add_coding_assistant">Add Coding Assistant</string>
+    <string name="coding_assistant_limit">Maximum 3 coding assistants</string>
+    <string name="coding_assistant_setup_title">Create Coding Assistant</string>
+    <string name="wizard_step_api">Step 1: Select API Account</string>
+    <string name="wizard_step_prompt">Step 2: System Prompt (optional)</string>
+    <string name="wizard_step_repo">Step 3: Connect Repository (optional)</string>
+    <string name="wizard_select_api">Select an API account to use</string>
+    <string name="wizard_no_api">No API accounts configured. Add one in Settings first.</string>
+    <string name="wizard_prompt_hint">Set a custom system prompt for this coding assistant…</string>
+    <string name="wizard_skip">Skip</string>
+    <string name="wizard_next">Next</string>
+    <string name="wizard_create">Create</string>
+    <string name="wizard_repo_url_hint">https://github.com/owner/repo</string>
+    <string name="wizard_connect_repo">Connect Repository</string>
+    <string name="wizard_connecting">Connecting…</string>
+    <string name="wizard_connected">Connected: %s</string>
+    <string name="wizard_login_required">Login required</string>
+    <string name="wizard_login_desc">You need to log in to access this repository</string>
+    <string name="wizard_repo_skipped">No repository connected. The assistant won\'t have project context.</string>
+
+    <!-- Terminal -->
+    <string name="terminal_title">Terminal</string>
+    <string name="terminal_input_hint">$ enter command…</string>
+    <string name="terminal_clear">Clear</string>
+    <string name="terminal_new">New Session</string>
+    <string name="terminal_copy">Copy Output</string>
+
+    <!-- Repo Browser -->
+    <string name="repo_browser_title">Repository</string>
+    <string name="repo_url_hint">Enter repository URL…</string>
+    <string name="repo_go">Go</string>
+    <string name="repo_refresh">Refresh</string>
+    <string name="repo_loading">Loading repository…</string>
+
+    <!-- Sub-mode labels -->
+    <string name="mode_chat">AI Chat</string>
+    <string name="mode_terminal">Terminal</string>
+    <string name="mode_repo">Repository</string>
+
+    <!-- Change Review -->
+    <string name="change_review_title">Pending Changes</string>
+    <string name="change_count">%d change(s)</string>
+    <string name="accept_all">Accept All</string>
+    <string name="reject_all">Reject All</string>
+    <string name="accept">Accept</string>
+    <string name="reject">Reject</string>
+    <string name="commit_changes">Commit Changes</string>
+    <string name="commit_message_hint">Commit message…</string>
+    <string name="no_pending_changes">No pending changes</string>
+    <string name="changes_applied">Changes applied successfully</string>
+    <string name="view_changes">Review Changes</string>
 </resources>

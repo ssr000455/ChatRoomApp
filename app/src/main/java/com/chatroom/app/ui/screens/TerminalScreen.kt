@@ -1,0 +1,266 @@
+package com.chatroom.app.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.chatroom.app.R
+import com.chatroom.app.terminal.TerminalSession
+import kotlinx.coroutines.launch
+
+@Composable
+fun TerminalScreen(
+    terminalSession: TerminalSession,
+    onToggleSidebar: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val history by terminalSession.history.collectAsState()
+    val isRunning by terminalSession.isRunning.collectAsState()
+    val listState = rememberLazyListState()
+    var inputValue by remember { mutableStateOf(TextFieldValue("")) }
+    val scope = rememberCoroutineScope()
+    val prompt = "${terminalSession.workingDirectory}$ "
+
+    // Auto-scroll to bottom
+    LaunchedEffect(history.size) {
+        if (history.isNotEmpty()) {
+            listState.scrollToItem(history.size)
+        }
+    }
+
+    val backgroundColor = androidx.compose.ui.graphics.Color(0xFF1E1E1E)
+    val textColor = androidx.compose.ui.graphics.Color(0xFFD4D4D4)
+    val promptColor = androidx.compose.ui.graphics.Color(0xFF4EC9B0)
+    val errorColor = androidx.compose.ui.graphics.Color(0xFFF44747)
+    val successColor = androidx.compose.ui.graphics.Color(0xFF6A9955)
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+    ) {
+        // Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(androidx.compose.ui.graphics.Color(0xFF2D2D2D))
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onToggleSidebar,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = "Menu",
+                    tint = textColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.terminal_title),
+                style = TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 14.sp,
+                    color = textColor
+                )
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            IconButton(
+                onClick = { terminalSession.clearHistory() },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DeleteSweep,
+                    contentDescription = stringResource(R.string.terminal_clear),
+                    tint = textColor.copy(alpha = 0.6f),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        // Terminal output
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 4.dp)
+        ) {
+            // Welcome message
+            item {
+                Text(
+                    text = "ChatRoom Terminal - Code Repository Access",
+                    style = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        color = successColor
+                    ),
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+                Text(
+                    text = "Type 'help' for available commands",
+                    style = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        color = textColor.copy(alpha = 0.6f)
+                    ),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            // History
+            items(history) { entry ->
+                Text(
+                    text = "${entry.workingDirectory}$ ${entry.command}",
+                    style = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 13.sp,
+                        color = promptColor
+                    )
+                )
+                if (entry.output.isNotBlank()) {
+                    Text(
+                        text = entry.output.trimEnd(),
+                        style = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                            color = if (entry.exitCode != 0) errorColor else textColor
+                        ),
+                        modifier = Modifier.horizontalScroll(rememberScrollState())
+                    )
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+            }
+
+            // Input line
+            item {
+                Row {
+                    Text(
+                        text = prompt,
+                        style = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                            color = promptColor
+                        )
+                    )
+                    Box(modifier = Modifier.weight(1f)) {
+                        BasicTextField(
+                            value = inputValue,
+                            onValueChange = { inputValue = it },
+                            textStyle = TextStyle(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 13.sp,
+                                color = textColor
+                            ),
+                            cursorBrush = SolidColor(textColor),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            decorationBox = { innerTextField ->
+                                if (inputValue.text.isEmpty()) {
+                                    Text(
+                                        text = stringResource(R.string.terminal_input_hint),
+                                        style = TextStyle(
+                                            fontFamily = FontFamily.Monospace,
+                                            fontSize = 13.sp,
+                                            color = textColor.copy(alpha = 0.3f)
+                                        )
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        )
+                    }
+                }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+
+        // Bottom action bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(androidx.compose.ui.graphics.Color(0xFF2D2D2D))
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = terminalSession.workingDirectory,
+                    style = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        color = textColor.copy(alpha = 0.6f)
+                    ),
+                    maxLines = 1
+                )
+            }
+            IconButton(
+                onClick = {
+                    val cmd = inputValue.text.trim()
+                    if (cmd.isNotEmpty() && !isRunning) {
+                        scope.launch {
+                            terminalSession.executeCommand(cmd)
+                        }
+                        inputValue = TextFieldValue("")
+                    }
+                },
+                enabled = inputValue.text.isNotBlank() && !isRunning,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Execute",
+                    tint = if (inputValue.text.isNotBlank() && !isRunning)
+                        promptColor else textColor.copy(alpha = 0.3f),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}

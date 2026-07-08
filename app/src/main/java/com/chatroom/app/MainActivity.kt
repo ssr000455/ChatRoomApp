@@ -14,18 +14,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.chatroom.app.R
+import com.chatroom.app.data.model.SessionMode
 import com.chatroom.app.data.repository.BackupManager
 import com.chatroom.app.navigation.AppNavigation
+import com.chatroom.app.terminal.TerminalSession
 import com.chatroom.app.ui.components.Sidebar
 import com.chatroom.app.ui.components.SidebarDestination
+import com.chatroom.app.ui.screens.RepoLoginScreen
 import com.chatroom.app.ui.theme.ChatRoomTheme
 import com.chatroom.app.viewmodel.ApiAccountViewModel
 import com.chatroom.app.viewmodel.ChatViewModel
@@ -101,7 +104,25 @@ private fun ChatRoomAppContent(
     val uiState by chatViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Auto-restore from backup file on first launch (after reinstall / data loss)
+    // Terminal sessions per coding assistant session
+    val terminalSessions = remember { mutableStateMapOf<String, TerminalSession>() }
+
+    // Repo login overlay state
+    var showRepoLogin by remember { mutableStateOf(false) }
+    var repoLoginUrl by remember { mutableStateOf("") }
+
+    // Auto-create terminal sessions for coding assistant sessions
+    LaunchedEffect(sessions) {
+        sessions.filter { it.isCodingAssistant }.forEach { session ->
+            if (!terminalSessions.containsKey(session.id)) {
+                val ts = TerminalSession("Terminal-${session.id}")
+                ts.start(session.localPath.ifBlank { "/" })
+                terminalSessions[session.id] = ts
+            }
+        }
+    }
+
+    // Auto-restore from backup file on first launch
     LaunchedEffect(Unit) {
         val backupManager = BackupManager(context)
         val restored = backupManager.autoRestoreIfNeeded()
@@ -118,23 +139,41 @@ private fun ChatRoomAppContent(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // BackHandler: close sidebar → navigate home → system back
-        BackHandler(enabled = isSidebarOpen) { isSidebarOpen = false }
-        BackHandler(enabled = !isSidebarOpen && currentDestination != SidebarDestination.Main) {
+        // BackHandler: repo login -> wizard -> main -> system back
+        BackHandler(enabled = showRepoLogin) { showRepoLogin = false }
+        BackHandler(enabled = !showRepoLogin && !isSidebarOpen && currentDestination != SidebarDestination.Main) {
             currentDestination = SidebarDestination.Main
         }
+        BackHandler(enabled = isSidebarOpen) { isSidebarOpen = false }
 
-        // Main content
-        AppNavigation(
-            currentDestination = currentDestination,
-            chatViewModel = chatViewModel,
-            settingsViewModel = settingsViewModel,
-            apiAccountViewModel = apiAccountViewModel,
-            identityViewModel = identityViewModel,
-            userProfileViewModel = userProfileViewModel,
-            onToggleSidebar = { isSidebarOpen = !isSidebarOpen },
-            onCloseSidebar = { isSidebarOpen = false }
-        )
+        // Main content (or wizard)
+        if (currentDestination != SidebarDestination.CodingAssistantSetup) {
+            AppNavigation(
+                currentDestination = currentDestination,
+                chatViewModel = chatViewModel,
+                settingsViewModel = settingsViewModel,
+                apiAccountViewModel = apiAccountViewModel,
+                identityViewModel = identityViewModel,
+                userProfileViewModel = userProfileViewModel,
+                terminalSessions = terminalSessions,
+                onToggleSidebar = { isSidebarOpen = !isSidebarOpen },
+                onSetupNavigate = { url ->
+                    repoLoginUrl = url
+                    showRepoLogin = true
+                },
+                onCloseSidebar = { isSidebarOpen = false }
+            )
+        } else {
+            // Show wizard directly (outside AnimatedContent to avoid conflicts)
+            CodingAssistantScreen(
+                chatViewModel = chatViewModel,
+                onOpenRepoLogin = { url ->
+                    repoLoginUrl = url
+                    showRepoLogin = true
+                },
+                onBack = { currentDestination = SidebarDestination.Main }
+            )
+        }
 
         // Sidebar overlay
         Sidebar(
@@ -148,14 +187,58 @@ private fun ChatRoomAppContent(
                 chatViewModel.selectSession(sessionId)
                 currentDestination = SidebarDestination.Main
             },
+            onSelectSessionMode = { sessionId, mode ->
+                chatViewModel.setSessionMode(sessionId, mode)
+                currentDestination = SidebarDestination.Main
+            },
             onDeleteSession = { sessionId ->
                 chatViewModel.deleteSession(sessionId)
+                terminalSessions.remove(sessionId)
             },
             onNewChat = {
                 chatViewModel.createNewSession()
                 currentDestination = SidebarDestination.Main
             },
+            onAddCodingAssistant = {
+                currentDestination = SidebarDestination.CodingAssistantSetup
+            },
             onClose = { isSidebarOpen = false }
         )
+
+        // Repo login overlay (full screen above everything)
+        if (showRepoLogin) {
+            RepoLoginScreen(
+                repoUrl = repoLoginUrl,
+                onLoginSuccess = { token ->
+                    Toast.makeText(context, "Repository connected successfully", Toast.LENGTH_SHORT).show()
+                    showRepoLogin = false
+                },
+                onBack = { showRepoLogin = false }
+            )
+        }
     }
+}
+
+@Composable
+private fun CodingAssistantScreen(
+    chatViewModel: ChatViewModel,
+    onOpenRepoLogin: (String) -> Unit,
+    onBack: () -> Unit
+) {
+    val sessions by chatViewModel.sessions.collectAsState()
+    val apiAccounts by chatViewModel.apiAccounts.collectAsState()
+    val codingAssistantCount = sessions.count { it.isCodingAssistant }
+
+    com.chatroom.app.ui.screens.CodingAssistantWizardScreen(
+        apiAccounts = apiAccounts,
+        currentCodingAssistantCount = codingAssistantCount,
+        onCreate = { apiAccountId, systemPrompt, repoUrl, repoOwner, repoName ->
+            chatViewModel.createCodingAssistantSession(
+                apiAccountId, systemPrompt, repoUrl, repoOwner, repoName
+            )
+            onBack()
+        },
+        onOpenRepoLogin = onOpenRepoLogin,
+        onBack = onBack
+    )
 }

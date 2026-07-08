@@ -2,6 +2,8 @@ package com.chatroom.app.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
@@ -26,12 +28,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
@@ -53,13 +59,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.chatroom.app.R
 import com.chatroom.app.data.model.Session
+import com.chatroom.app.data.model.SessionMode
+import com.chatroom.app.data.model.SessionType
 import com.chatroom.app.ui.components.SidebarDestination.ApiKeys
+import com.chatroom.app.ui.components.SidebarDestination.CodingAssistantSetup
 import com.chatroom.app.ui.components.SidebarDestination.Identities
 import com.chatroom.app.ui.components.SidebarDestination.Main
 import com.chatroom.app.ui.components.SidebarDestination.Profile
 import com.chatroom.app.ui.components.SidebarDestination.Settings
 
-enum class SidebarDestination { Main, Settings, Sessions, ApiKeys, Identities, Profile }
+enum class SidebarDestination {
+    Main, Settings, Sessions, ApiKeys, Identities, Profile,
+    CodingAssistantSetup
+}
 
 @Composable
 fun Sidebar(
@@ -70,11 +82,16 @@ fun Sidebar(
     isGenerating: Boolean = false,
     onNavigate: (SidebarDestination) -> Unit,
     onSelectSession: (String) -> Unit,
+    onSelectSessionMode: (String, SessionMode) -> Unit,
     onDeleteSession: (String) -> Unit,
     onNewChat: () -> Unit,
+    onAddCodingAssistant: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val chatSessions = sessions.filter { it.type == SessionType.CHAT }
+    val codingSessions = sessions.filter { it.type == SessionType.CODING_ASSISTANT }
+
     AnimatedVisibility(
         visible = isOpen,
         enter = slideInHorizontally(animationSpec = tween(300)) { -it },
@@ -177,58 +194,147 @@ fun Sidebar(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Session list header
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    // Session list (scrollable)
+                    LazyColumn(
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Text(
-                            text = stringResource(R.string.session_count, sessions.size),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        if (isGenerating) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
+                        // --- Coding Assistant section ---
+                        if (codingSessions.isNotEmpty()) {
+                            item {
+                                Row(
                                     modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary)
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 2.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.coding_assistant),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    if (codingSessions.size < 3) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = stringResource(R.string.add_coding_assistant),
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .clip(CircleShape)
+                                                .clickable { onAddCodingAssistant(); onClose() }
+                                                .padding(2.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            codingSessions.forEach { session ->
+                                item(key = "ca_${session.id}") {
+                                    CodingAssistantSessionItem(
+                                        session = session,
+                                        isActive = session.id == activeSessionId,
+                                        isGenerating = isGenerating && session.id == activeSessionId,
+                                        onSelectMode = { mode ->
+                                            onSelectSessionMode(session.id, mode)
+                                            onClose()
+                                        },
+                                        onDelete = { onDeleteSession(session.id) }
+                                    )
+                                }
+                            }
+
+                            // Add button when under limit
+                            if (codingSessions.isEmpty() || codingSessions.size < 3) {
+                                item {
+                                    AddCodingAssistantButton(
+                                        onClick = {
+                                            onAddCodingAssistant()
+                                            onClose()
+                                        }
+                                    )
+                                }
+                            }
+
+                            item {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Divider(
+                                    color = MaterialTheme.colorScheme.outlineVariant,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = stringResource(R.string.generating),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+                        } else {
+                            // Show add button when no coding assistants exist
+                            item {
+                                AddCodingAssistantButton(
+                                    onClick = {
+                                        onAddCodingAssistant()
+                                        onClose()
+                                    }
                                 )
                             }
+                            item {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Divider(
+                                    color = MaterialTheme.colorScheme.outlineVariant,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
                         }
-                    }
 
-                    // Session list (always visible)
-                    if (sessions.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                                .padding(20.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = stringResource(R.string.no_sessions),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                            )
+                        // --- Regular Chat Sessions ---
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.session_count, chatSessions.size),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (isGenerating) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.primary)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = stringResource(R.string.generating),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
                         }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            items(sessions, key = { it.id }) { session ->
-                                SessionItem(
+
+                        if (chatSessions.isEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(20.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.no_sessions),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                }
+                            }
+                        } else {
+                            items(chatSessions, key = { it.id }) { session ->
+                                ChatSessionItem(
                                     session = session,
                                     isActive = session.id == activeSessionId,
                                     isGenerating = isGenerating && session.id == activeSessionId,
@@ -299,7 +405,213 @@ private fun SidebarButton(
 }
 
 @Composable
-private fun SessionItem(
+private fun AddCodingAssistantButton(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.Code,
+            contentDescription = stringResource(R.string.add_coding_assistant),
+            tint = MaterialTheme.colorScheme.onTertiaryContainer,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = stringResource(R.string.add_coding_assistant),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onTertiaryContainer
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        Icon(
+            imageVector = Icons.Default.Add,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.6f),
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
+
+@Composable
+private fun CodingAssistantSessionItem(
+    session: Session,
+    isActive: Boolean,
+    isGenerating: Boolean,
+    onSelectMode: (SessionMode) -> Unit,
+    onDelete: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    val bg = if (isActive && expanded) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+             else MaterialTheme.colorScheme.surface
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 1.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(bg)
+    ) {
+        // Header row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Code,
+                contentDescription = null,
+                tint = if (isActive) MaterialTheme.colorScheme.primary
+                       else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = session.repoDisplayName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (session.repoUrl.isNotBlank()) {
+                    Text(
+                        text = session.repoUrl,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Icon(
+                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = if (expanded) "Collapse" else "Expand",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(18.dp)
+            )
+
+            Spacer(modifier = Modifier.width(4.dp))
+
+            androidx.compose.material3.IconButton(
+                onClick = { showDeleteDialog = true },
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.delete_session),
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+
+        // Expanded sub-modes
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(animationSpec = tween(200)),
+            exit = shrinkVertically(animationSpec = tween(200))
+        ) {
+            Column(
+                modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 6.dp)
+            ) {
+                SubModeItem(
+                    icon = Icons.Default.Chat,
+                    label = stringResource(R.string.mode_chat),
+                    isActive = isActive && session.mode == SessionMode.CHAT,
+                    onClick = { onSelectMode(SessionMode.CHAT) }
+                )
+                SubModeItem(
+                    icon = Icons.Default.Terminal,
+                    label = stringResource(R.string.mode_terminal),
+                    isActive = isActive && session.mode == SessionMode.TERMINAL,
+                    onClick = { onSelectMode(SessionMode.TERMINAL) }
+                )
+                SubModeItem(
+                    icon = Icons.Default.Code,
+                    label = stringResource(R.string.mode_repo),
+                    isActive = isActive && session.mode == SessionMode.REPO_HOME,
+                    onClick = { onSelectMode(SessionMode.REPO_HOME) }
+                )
+            }
+        }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.delete_session_title)) },
+            text = { Text(stringResource(R.string.delete_session_message, session.repoDisplayName)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDelete()
+                    showDeleteDialog = false
+                }) {
+                    Text(stringResource(R.string.delete_session), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun SubModeItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    isActive: Boolean,
+    onClick: () -> Unit
+) {
+    val bg = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+             else MaterialTheme.colorScheme.surface
+    val contentColor = if (isActive) MaterialTheme.colorScheme.primary
+                       else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 1.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(bg)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = contentColor,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = contentColor,
+            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal
+        )
+    }
+}
+
+@Composable
+private fun ChatSessionItem(
     session: Session,
     isActive: Boolean,
     isGenerating: Boolean,
@@ -321,7 +633,6 @@ private fun SessionItem(
             .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Status icon
         if (isGenerating) {
             Box(
                 modifier = Modifier
@@ -348,7 +659,6 @@ private fun SessionItem(
         }
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Session title
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = session.title,
@@ -360,14 +670,13 @@ private fun SessionItem(
             )
             if (isGenerating) {
                 Text(
-                    text = "generating…",
+                    text = "generating...",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
         }
 
-        // Delete button
         androidx.compose.material3.IconButton(
             onClick = { showDeleteDialog = true },
             modifier = Modifier.size(28.dp)
@@ -381,7 +690,6 @@ private fun SessionItem(
         }
     }
 
-    // Delete confirmation dialog
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },

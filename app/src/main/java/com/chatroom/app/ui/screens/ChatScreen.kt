@@ -72,7 +72,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.chatroom.app.R
 import com.chatroom.app.data.model.ChatMessage
-import kotlinx.coroutines.launch
+import com.chatroom.app.data.model.SessionType
+import com.chatroom.app.ui.components.ChangeReviewSheet
 import com.chatroom.app.ui.components.ChatBubble
 import com.chatroom.app.ui.components.ThinkingIndicator
 import com.chatroom.app.viewmodel.ChatViewModel
@@ -93,6 +94,7 @@ fun ChatScreen(
     val scope = rememberCoroutineScope()
 
     val messages = activeSession?.messages ?: emptyList()
+    var showChangeReview by remember { mutableStateOf(false) }
 
     // Show scroll-to-bottom button when not at the last message
     val showScrollToBottom by remember {
@@ -601,6 +603,26 @@ fun ChatScreen(
                 Divider()
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // ── Review Changes (coding assistant only) ──
+                if (activeSession?.isCodingAssistant == true &&
+                    activeSession!!.pendingChanges.isNotEmpty()) {
+                    Button(
+                        onClick = {
+                            viewModel.toggleChatSettings()
+                            showChangeReview = true
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.view_changes) + " (${activeSession!!.pendingChanges.size})")
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Divider()
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
                 // ── Select Reference Sessions ──
                 Text(
                     text = "AI Can Read These Conversations",
@@ -659,6 +681,25 @@ fun ChatScreen(
                 }
             }
         }
+    }
+
+    // Change review sheet (for coding assistant sessions)
+    if (showChangeReview) {
+        val changes = activeSession?.pendingChanges?.filter {
+            it.status == com.chatroom.app.data.model.ChangeStatus.PENDING
+        } ?: emptyList()
+        ChangeReviewSheet(
+            changes = changes,
+            onAcceptAll = { viewModel.acceptAllChanges() },
+            onRejectAll = { viewModel.rejectAllChanges() },
+            onAcceptOne = { changeId -> viewModel.acceptChange(changeId) },
+            onRejectOne = { changeId -> viewModel.rejectChange(changeId) },
+            onCommit = { message ->
+                viewModel.commitChanges(message)
+                showChangeReview = false
+            },
+            onDismiss = { showChangeReview = false }
+        )
     }
 }
 
