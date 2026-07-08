@@ -65,10 +65,6 @@ fun AppNavigation(
                 onToggleSidebar = onToggleSidebar,
                 onSessionSelected = onCloseSidebar
             )
-            else -> ChatScreen(
-                viewModel = chatViewModel,
-                onToggleSidebar = onToggleSidebar
-            )
         }
     }
 }

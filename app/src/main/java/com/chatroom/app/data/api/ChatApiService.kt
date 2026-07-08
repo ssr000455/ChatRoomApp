@@ -23,7 +23,7 @@ interface ChatApiService {
     companion object {
         fun create(baseUrl: String): ChatApiService {
             val logging = HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
+                level = HttpLoggingInterceptor.Level.HEADERS
             }
 
             val client = OkHttpClient.Builder()

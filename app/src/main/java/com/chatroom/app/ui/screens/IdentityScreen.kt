@@ -142,7 +142,9 @@ fun IdentityScreen(
                     text = it,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .clickable { viewModel.clearError() }
                 )
             }
 

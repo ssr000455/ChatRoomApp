@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,10 +31,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.TravelExplore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -42,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,6 +77,11 @@ fun ChatScreen(
 
     // Auto-scroll to bottom only if user is near the bottom
     val messages = activeSession?.messages ?: emptyList()
+    // Track the last AI message by ID for reliable regenerate callback
+    val lastAiMessageId = remember(messages) {
+        messages.lastOrNull { it.role == "assistant" }?.id
+    }
+
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()
@@ -215,18 +222,23 @@ fun ChatScreen(
                         .fillMaxSize()
                         .padding(vertical = 8.dp)
                 ) {
-                    items(messages) { message ->
+                    items(messages, key = { it.id }) { message ->
+                        val isLastAi = message.role == "assistant" && message.id == lastAiMessageId
                         ChatBubble(
                             message = message,
                             isLastMessage = message == messages.lastOrNull(),
-                            onRegenerate = if (message.role == "assistant" && message == messages.lastOrNull())
-                                ({ viewModel.regenerateLastResponse() }) else null
+                            onRegenerate = if (isLastAi && !uiState.isSending)
+                                ({ viewModel.regenerateLastResponse() }) else null,
+                            onFollowUp = if (!uiState.isSending) ({ content ->
+                                viewModel.updateInput("\"$content\" ")
+                            }) else null,
+                            searchSources = if (isLastAi) uiState.searchSources else emptyList()
                         )
                     }
 
                     if (uiState.isSending) {
                         item {
-                            ThinkingIndicator()
+                            ThinkingIndicator(elapsedSeconds = uiState.thinkingElapsed)
                         }
                     }
                 }
@@ -251,10 +263,11 @@ fun ChatScreen(
             }
         }
 
-        // Input area
+        // Input area — imePadding() moves it up when keyboard is shown
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .imePadding()
                 .navigationBarsPadding()
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
@@ -355,9 +368,12 @@ fun ChatScreen(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Send button
-                val sendBg by animateColorAsState(
-                    targetValue = if (uiState.inputText.isNotBlank() && !uiState.isSending)
+                // Send/Stop button
+                val isGenerating = uiState.isSending
+                val btnBg by animateColorAsState(
+                    targetValue = if (isGenerating)
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                    else if (uiState.inputText.isNotBlank())
                         MaterialTheme.colorScheme.primary
                     else
                         MaterialTheme.colorScheme.surfaceVariant,
@@ -366,19 +382,27 @@ fun ChatScreen(
 
                 IconButton(
                     onClick = {
-                        viewModel.sendMessage()
-                        focusManager.clearFocus()
+                        if (isGenerating) {
+                            viewModel.stopSending()
+                        } else {
+                            viewModel.sendMessage()
+                            focusManager.clearFocus()
+                        }
                     },
-                    enabled = uiState.inputText.isNotBlank() && !uiState.isSending,
+                    enabled = isGenerating || uiState.inputText.isNotBlank(),
                     modifier = Modifier
                         .size(52.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(sendBg)
+                        .background(btnBg)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Send,
-                        contentDescription = stringResource(R.string.send),
-                        tint = if (uiState.inputText.isNotBlank() && !uiState.isSending)
+                        imageVector = if (isGenerating) Icons.Default.Stop else Icons.Default.Send,
+                        contentDescription = stringResource(
+                            if (isGenerating) R.string.stop else R.string.send
+                        ),
+                        tint = if (isGenerating)
+                            MaterialTheme.colorScheme.onError
+                        else if (uiState.inputText.isNotBlank())
                             MaterialTheme.colorScheme.onPrimary
                         else
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),

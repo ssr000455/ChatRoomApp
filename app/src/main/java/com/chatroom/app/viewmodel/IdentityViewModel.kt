@@ -30,6 +30,7 @@ class IdentityViewModel(application: Application) : AndroidViewModel(application
 
     fun toggleForm() {
         _showForm.value = !_showForm.value
+        _error.value = null
     }
 
     fun addIdentity(identity: Identity) {

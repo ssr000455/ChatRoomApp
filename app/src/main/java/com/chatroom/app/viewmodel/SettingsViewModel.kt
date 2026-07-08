@@ -27,22 +27,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val language: StateFlow<String> = repository.language
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsRepository.LANGUAGE_ZH_CN)
 
-    val searchEndpoint: StateFlow<String> = repository.searchEndpoint
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsRepository.DEFAULT_SEARCH_ENDPOINT)
-
-    val searchApiKey: StateFlow<String> = repository.searchApiKey
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
-
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { repository.setThemeMode(mode) }
-    }
-
-    fun setSearchEndpoint(endpoint: String) {
-        viewModelScope.launch { repository.setSearchEndpoint(endpoint) }
-    }
-
-    fun setSearchApiKey(apiKey: String) {
-        viewModelScope.launch { repository.setSearchApiKey(apiKey) }
     }
 
     fun setLanguage(lang: String) {

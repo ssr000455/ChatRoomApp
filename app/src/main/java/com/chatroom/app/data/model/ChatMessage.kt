@@ -5,7 +5,9 @@ import com.google.gson.annotations.SerializedName
 data class ChatMessage(
     val role: String,  // "user", "assistant", "system"
     val content: String,
-    val attachments: List<Attachment> = emptyList()
+    val attachments: List<Attachment> = emptyList(),
+    @SerializedName("reasoning_content")
+    val reasoningContent: String? = null
 )
 
 data class Attachment(

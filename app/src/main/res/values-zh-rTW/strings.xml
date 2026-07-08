@@ -28,6 +28,11 @@
     <string name="copy">複製</string>
     <string name="regenerate">重新生成</string>
     <string name="copied_toast">已複製！</string>
+    <string name="thinking_process">思考過程</string>
+    <string name="search_sources">搜尋來源（%d個）</string>
+    <string name="more_sources">還有 %d 個來源</string>
+    <string name="follow_up">追問</string>
+    <string name="stop">停止</string>
 
     <!-- Settings -->
     <string name="settings_title">設定</string>
@@ -101,4 +106,5 @@
     <string name="confirm_delete">確定要刪除此會話嗎？</string>
     <string name="cancel">取消</string>
     <string name="confirm">確定</string>
+    <string name="messages_label">則訊息</string>
 </resources>

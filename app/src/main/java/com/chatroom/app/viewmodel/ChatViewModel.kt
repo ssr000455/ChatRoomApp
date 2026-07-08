@@ -14,12 +14,15 @@ import com.chatroom.app.data.repository.ApiAccountRepository
 import com.chatroom.app.data.repository.IdentityRepository
 import com.chatroom.app.data.repository.SessionRepository
 import com.chatroom.app.util.AppLogger
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 data class ChatUiState(
@@ -27,7 +30,9 @@ data class ChatUiState(
     val isSending: Boolean = false,
     val webSearchEnabled: Boolean = false,
     val deepThinkingEnabled: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val thinkingElapsed: Int = 0,      // seconds elapsed while waiting for AI
+    val searchSources: List<String> = emptyList()  // URLs from web search
 )
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
@@ -36,6 +41,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val apiAccountRepo = ApiAccountRepository(application)
     private val identityRepo = IdentityRepository(application)
     private val webSearchService = WebSearchService.createDefault()
+    private var timerJob: Job? = null
 
     val sessions: StateFlow<List<Session>> = sessionRepo.sessions
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -51,6 +57,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
+
+    // Track the current send job so we can cancel it
+    private var sendJob: Job? = null
 
     fun updateInput(text: String) {
         _uiState.value = _uiState.value.copy(inputText = text)
@@ -99,8 +108,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         AppLogger.d("ChatVM", "sendMessage: len=${text.length}")
 
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(inputText = "", isSending = true, error = null)
+        sendJob?.cancel()
+        sendJob = viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                inputText = "", isSending = true, error = null,
+                thinkingElapsed = 0, searchSources = emptyList()
+            )
+
+            // Start elapsed time counter
+            startTimer()
 
             // Ensure we have an active session (create one if needed)
             var session = activeSession.value
@@ -143,22 +159,32 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 historyTokens += msg.content.length / 2
                 historyTokens <= maxHistoryTokens
             }.reversed()
+            val hadNoMessages = session.messages.isEmpty()
             messages.addAll(historyMessages)
             messages.add(userMessage)
+
+            // Show user message immediately so chat appears before AI starts
+            sessionRepo.addMessageToSession(session.id, userMessage)
+
+            // Collect search sources
+            val searchSources = mutableListOf<String>()
 
             // Web search: use DuckDuckGo by default, no API key needed
             if (_uiState.value.webSearchEnabled) {
                 try {
-                    val searchResults = webSearchService.search(
+                    val (searchText, sources) = webSearchService.searchWithSources(
                         WebSearchService.DEFAULT_ENDPOINT, null, text
                     )
+                    searchSources.addAll(sources)
+                    // Update UI with sources immediately
+                    _uiState.value = _uiState.value.copy(searchSources = sources.toList())
+
                     val searchContext = ChatMessage(
                         role = "system",
-                        content = "Web search results for \"$text\":\n$searchResults"
+                        content = "Web search results for \"$text\":\n$searchText"
                     )
                     messages.add(messages.size - 1, searchContext)
                 } catch (e: Exception) {
-                    // If search fails, proceed without results
                     val failMsg = ChatMessage(
                         role = "system",
                         content = "Web search failed: ${e.message}. Proceed without search results."
@@ -191,15 +217,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     val aiMessage = response.body()?.choices?.firstOrNull()?.message
                         ?: ChatMessage(role = "assistant", content = "No response generated.")
 
-                    sessionRepo.addMessageToSession(session.id, userMessage)
                     sessionRepo.addMessageToSession(session.id, aiMessage)
 
-                    // Update session title from first message
-                    // Use session from repo (has messages) instead of local session (empty for new sessions)
-                    val currentSession = sessionRepo.activeSession.first()
-                    if (currentSession?.messages?.isEmpty() == true) {
-                        val title = if (text.length > 30) text.take(30) + "…" else text
-                        sessionRepo.updateSession(currentSession.copy(title = title))
+                    // Update session title from first exchange
+                    if (hadNoMessages) {
+                        val title = if (text.length > 30) text.take(30) + "\u2026" else text
+                        // Use session from repo (has messages) to avoid overwriting with empty local copy
+                        val repoSession = sessionRepo.activeSession.first() ?: session
+                        sessionRepo.updateSession(repoSession.copy(title = title))
                     }
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "Unknown error"
@@ -214,6 +239,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     error = "Network Error: ${e.message ?: "Connection failed"}"
                 )
             } finally {
+                stopTimer()
                 _uiState.value = _uiState.value.copy(isSending = false)
             }
         }
@@ -229,8 +255,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         // Find the last user message
         val lastUserMsg = messages.lastOrNull { it.role == "user" } ?: return
 
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSending = true, error = null)
+        sendJob?.cancel()
+        sendJob = viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isSending = true, error = null,
+                thinkingElapsed = 0, searchSources = emptyList()
+            )
+            startTimer()
 
             // Build message list with system prompt
             val msgList = mutableListOf(
@@ -284,6 +315,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     error = "Network Error: ${e.message ?: "Connection failed"}"
                 )
             } finally {
+                stopTimer()
                 _uiState.value = _uiState.value.copy(isSending = false)
             }
         }
@@ -291,5 +323,29 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    fun stopSending() {
+        sendJob?.cancel()
+        sendJob = null
+        stopTimer()
+        _uiState.value = _uiState.value.copy(isSending = false)
+    }
+
+    private fun startTimer() {
+        timerJob?.cancel()
+        timerJob = viewModelScope.launch {
+            var elapsed = 0
+            while (isActive) {
+                delay(1000)
+                elapsed++
+                _uiState.value = _uiState.value.copy(thinkingElapsed = elapsed)
+            }
+        }
+    }
+
+    private fun stopTimer() {
+        timerJob?.cancel()
+        timerJob = null
     }
 }

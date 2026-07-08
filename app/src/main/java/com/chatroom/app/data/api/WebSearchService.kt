@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit
 
 class WebSearchService {
 
-    private val client: OkHttpClient = run {
+    internal val client: OkHttpClient = run {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BASIC
         }
@@ -162,4 +162,122 @@ class WebSearchService {
 
         fun createDefault(): WebSearchService = WebSearchService()
     }
+}
+
+/**
+ * Perform a web search and extract source URLs.
+ * Reuses the WebSearchService's OkHttpClient for proper timeout and connection pooling.
+ */
+suspend fun WebSearchService.searchWithSources(
+    endpoint: String,
+    apiKey: String?,
+    query: String
+): Pair<String, List<String>> {
+    val url = endpoint.replace("{query}", java.net.URLEncoder.encode(query, "UTF-8"))
+
+    val requestBuilder = okhttp3.Request.Builder()
+        .url(url)
+        .get()
+
+    if (!apiKey.isNullOrBlank()) {
+        requestBuilder.header("Authorization", "Bearer $apiKey")
+        requestBuilder.header("X-API-Key", apiKey)
+    }
+
+    val response = withContext(Dispatchers.IO) {
+        client.newCall(requestBuilder.build()).execute()
+    }
+
+    if (!response.isSuccessful) {
+        return "Search failed: HTTP ${response.code}" to emptyList()
+    }
+
+    val body = response.body?.string() ?: return "No search results" to emptyList()
+    return formatSearchResultsWithSources(body)
+}
+
+private fun formatSearchResultsWithSources(jsonBody: String): Pair<String, List<String>> {
+    val sources = mutableListOf<String>()
+    return try {
+        val gson = com.google.gson.Gson()
+        val map = gson.fromJson(jsonBody, Map::class.java) as? Map<*, *>
+        if (map != null) {
+            val text = formatDuckDuckGoWithSources(map, sources)
+            text to sources
+        } else {
+            (if (jsonBody.length > 3000) jsonBody.take(3000) + "…" else jsonBody) to sources
+        }
+    } catch (e: Exception) {
+        (if (jsonBody.length > 3000) jsonBody.take(3000) + "…" else jsonBody) to sources
+    }
+}
+
+@Suppress("UNCHECKED_CAST")
+private fun formatDuckDuckGoWithSources(map: Map<*, *>, sources: MutableList<String>): String {
+    val parts = mutableListOf<String>()
+
+    val abstractText = map["AbstractText"] as? String
+    val abstractSource = map["AbstractSource"] as? String
+    val abstractUrl = map["AbstractURL"] as? String
+    if (!abstractText.isNullOrBlank()) {
+        parts.add("Abstract: $abstractText")
+        if (!abstractSource.isNullOrBlank()) parts.add("Source: $abstractSource")
+        if (!abstractUrl.isNullOrBlank()) {
+            parts.add("URL: $abstractUrl")
+            sources.add(abstractUrl)
+        }
+    }
+
+    val answer = map["Answer"] as? String
+    if (!answer.isNullOrBlank()) parts.add("Answer: $answer")
+
+    val relatedTopics = map["RelatedTopics"] as? List<*>
+    if (relatedTopics != null) {
+        val results = mutableListOf<String>()
+        for (topic in relatedTopics) {
+            if (topic is Map<*, *>) {
+                val text = topic["Text"] as? String
+                val firstUrl = topic["FirstURL"] as? String
+                if (text != null) {
+                    results.add(if (firstUrl != null) "$text ($firstUrl)" else text)
+                    if (firstUrl != null) sources.add(firstUrl)
+                }
+                val topics = topic["Topics"] as? List<*>
+                if (topics != null) {
+                    for (sub in topics) {
+                        if (sub is Map<*, *>) {
+                            val subText = sub["Text"] as? String
+                            val subUrl = sub["FirstURL"] as? String
+                            if (subText != null) {
+                                results.add(if (subUrl != null) "$subText ($subUrl)" else subText)
+                                if (subUrl != null) sources.add(subUrl)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (results.isNotEmpty()) {
+            parts.add(""); parts.add("Related results:")
+            results.take(8).forEachIndexed { i, r -> parts.add("${i + 1}. $r") }
+        }
+    }
+
+    val results = map["Results"] as? List<*>
+    if (results != null && results.isNotEmpty()) {
+        parts.add(""); parts.add("Search results:")
+        for ((i, result) in results.withIndex()) {
+            if (result is Map<*, *>) {
+                val text = result["Text"] as? String
+                val url = result["FirstURL"] as? String
+                if (text != null) {
+                    parts.add("${i + 1}. $text${if (url != null) " ($url)" else ""}")
+                    if (url != null) sources.add(url)
+                }
+            }
+            if (i >= 8) break
+        }
+    }
+
+    return if (parts.isEmpty()) "No relevant search results found." else parts.joinToString("\n")
 }

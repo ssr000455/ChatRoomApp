@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Key
@@ -111,7 +112,7 @@ fun ApiAccountScreen(
                 shape = RoundedCornerShape(14.dp)
             ) {
                 Icon(
-                    imageVector = if (showForm) Icons.Default.Add else Icons.Default.Add,
+                    imageVector = if (showForm) Icons.Default.Check else Icons.Default.Add,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp)
                 )

@@ -9,14 +9,11 @@ import android.webkit.WebViewClient
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -35,7 +32,6 @@ fun MarkdownContent(
 ) {
     val isDark = isSystemInDarkTheme()
     val context = LocalContext.current
-    var measuredHeight by remember { mutableIntStateOf(40) }
 
     val textColor = if (isDark) "#e0e0e0" else "#1a1a1a"
     val codeBg = if (isDark) "#2d2d2d" else "#f5f5f5"
@@ -87,7 +83,7 @@ input[type="checkbox"]{margin-right:6px;transform:scale(1.1)}
 </head><body>
 <div id="content"></div>
 <script>
-var src = atob("$b64");
+var src = decodeURIComponent(escape(atob("$b64")));
 var md = window.markdownit({
   html: true, linkify: true, typographer: true, breaks: true,
   highlight: function(str, lang){
@@ -121,41 +117,28 @@ document.getElementById('content').innerHTML = md.render(src);
 </body></html>
 """.trimIndent()
 
-    val webView = remember {
-        WebView(context).apply {
-            setBackgroundColor(Color.TRANSPARENT)
-            isVerticalScrollBarEnabled = false
-            isHorizontalScrollBarEnabled = false
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.allowFileAccess = false
-            webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    view?.evaluateJavascript(
-                        "document.body.scrollHeight + 'px'"
-                    ) { result ->
-                        val h = result.replace("\"", "").replace("px", "").trim().toIntOrNull()
-                        if (h != null && h in 20..5000) measuredHeight = h
-                    }
-                }
-            }
-            webChromeClient = WebChromeClient()
-            loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
-        }
-    }
-
-    val heightDp = measuredHeight.coerceIn(40, 5000).dp
-
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
     ) {
         AndroidView(
-            factory = { webView },
+            factory = { ctx ->
+                WebView(ctx).apply {
+                    setBackgroundColor(Color.TRANSPARENT)
+                    isVerticalScrollBarEnabled = false
+                    isHorizontalScrollBarEnabled = false
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.allowFileAccess = false
+                    webViewClient = WebViewClient()
+                    webChromeClient = WebChromeClient()
+                }
+            },
+            update = { it.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null) },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(heightDp)
+                .heightIn(min = 40.dp, max = 600.dp)
         )
     }
 }

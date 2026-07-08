@@ -94,7 +94,7 @@ fun SessionManagerScreen(
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = "${sessions.size}/25",
+                text = stringResource(R.string.session_count, sessions.size),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -204,7 +204,7 @@ private fun SessionCard(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "${session.messages.size} messages",
+                    text = "${session.messages.size} ${stringResource(R.string.messages_label)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                 )
