@@ -32,8 +32,12 @@ data class ChatUiState(
     val webSearchEnabled: Boolean = false,
     val deepThinkingEnabled: Boolean = false,
     val error: String? = null,
-    val thinkingElapsed: Int = 0,      // seconds elapsed while waiting for AI
-    val searchSources: List<String> = emptyList()  // URLs from web search
+    val thinkingElapsed: Int = 0,
+    val searchSources: List<String> = emptyList(),
+    val showChatSettings: Boolean = false,
+    val editableSystemPrompt: String = "",
+    val selectedSessionIds: Set<String> = emptySet(),
+    val shareAccountInfo: Boolean = false
 )
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
@@ -197,6 +201,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val api = ChatApiService.create(apiAccount.apiBaseUrl)
 
+                // Inject context from selected sessions and account info
+                messages.addAll(messages.size - 1, buildContextMessages(session.id))
+
                 // Use reasoning model when deep thinking is enabled
                 val model = if (session.deepThinkingEnabled) apiAccount.reasoningModel else apiAccount.model
                 val reasoningEffort = if (session.deepThinkingEnabled) "high" else null
@@ -278,6 +285,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
             try {
                 val api = ChatApiService.create(apiAccount.apiBaseUrl)
+
+                // Inject context from selected sessions and account info
+                msgList.addAll(msgList.size - 1, buildContextMessages(session.id))
+
                 val model = if (session.deepThinkingEnabled) apiAccount.reasoningModel else apiAccount.model
                 val reasoningEffort = if (session.deepThinkingEnabled) "high" else null
 
@@ -322,6 +333,49 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun toggleChatSettings() {
+        val current = _uiState.value
+        if (current.showChatSettings) {
+            // Close sheet
+            _uiState.value = current.copy(showChatSettings = false)
+        } else {
+            // Open sheet — populate with current session's system prompt
+            val prompt = activeSession.value?.systemPrompt ?: ""
+            _uiState.value = current.copy(
+                showChatSettings = true,
+                editableSystemPrompt = prompt
+            )
+        }
+    }
+
+    fun updateSystemPrompt(prompt: String) {
+        _uiState.value = _uiState.value.copy(editableSystemPrompt = prompt)
+    }
+
+    fun saveSystemPrompt() {
+        viewModelScope.launch {
+            val session = activeSession.value ?: return@launch
+            val newPrompt = _uiState.value.editableSystemPrompt
+            sessionRepo.updateSession(session.copy(systemPrompt = newPrompt))
+        }
+    }
+
+    fun toggleSessionSelection(sessionId: String) {
+        val current = _uiState.value.selectedSessionIds
+        _uiState.value = _uiState.value.copy(
+            selectedSessionIds = if (sessionId in current)
+                current - sessionId
+            else
+                current + sessionId
+        )
+    }
+
+    fun toggleAccountInfoSharing() {
+        _uiState.value = _uiState.value.copy(
+            shareAccountInfo = !_uiState.value.shareAccountInfo
+        )
+    }
+
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
@@ -331,6 +385,51 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         sendJob = null
         stopTimer()
         _uiState.value = _uiState.value.copy(isSending = false)
+    }
+
+    /**
+     * Build context injection messages from selected sessions and account info.
+     * These are injected as system messages before the API call.
+     */
+    private suspend fun buildContextMessages(excludeSessionId: String): List<ChatMessage> {
+        val result = mutableListOf<ChatMessage>()
+        val selectedIds = _uiState.value.selectedSessionIds
+
+        // Inject recent messages from selected sessions
+        if (selectedIds.isNotEmpty()) {
+            val allSessions = sessions.value
+            val selectedSessions = allSessions.filter {
+                it.id in selectedIds && it.id != excludeSessionId && it.messages.isNotEmpty()
+            }
+            if (selectedSessions.isNotEmpty()) {
+                val contextParts = mutableListOf<String>()
+                for (s in selectedSessions) {
+                    contextParts.add("--- ${s.title} ---")
+                    val recent = s.messages.takeLast(6)
+                    for (m in recent) {
+                        val preview = m.content.take(200)
+                        contextParts.add("${m.role}: $preview")
+                    }
+                }
+                result.add(ChatMessage(
+                    role = "system",
+                    content = "Reference from other conversations:\n${contextParts.joinToString("\n")}"
+                ))
+            }
+        }
+
+        // Inject account info if enabled
+        if (_uiState.value.shareAccountInfo) {
+            val account = activeApiAccount.value
+            if (account != null) {
+                result.add(ChatMessage(
+                    role = "system",
+                    content = "Current AI configuration:\n- Account: ${account.name}\n- Model: ${account.model}\n- API: ${account.apiBaseUrl}"
+                ))
+            }
+        }
+
+        return result
     }
 
     private fun startTimer() {
