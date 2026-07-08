@@ -216,7 +216,22 @@ private fun ProfileCard(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Avatar
-            if (profile.avatarUri.isNotBlank()) {
+            if (profile.avatarData.isNotBlank()) {
+                val avatarBytes = remember(profile.avatarData) {
+                    android.util.Base64.decode(profile.avatarData, android.util.Base64.DEFAULT)
+                }
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(avatarBytes)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = profile.name,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else if (profile.avatarUri.isNotBlank()) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(profile.avatarUri)
@@ -356,7 +371,37 @@ private fun ProfileForm(
                     .clickable { imagePickerLauncher.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
-                if (avatarUri.isNotBlank()) {
+                if (avatarData.isNotBlank()) {
+                    val previewBytes = remember(avatarData) {
+                        android.util.Base64.decode(avatarData, android.util.Base64.DEFAULT)
+                    }
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(previewBytes)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Avatar",
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clip(CircleShape)
+                            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.3f))
+                            .clickable { imagePickerLauncher.launch("image/*") },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = stringResource(R.string.change_photo),
+                            tint = androidx.compose.ui.graphics.Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                } else if (avatarUri.isNotBlank()) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(avatarUri)
