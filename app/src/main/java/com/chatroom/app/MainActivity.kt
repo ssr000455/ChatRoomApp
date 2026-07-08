@@ -1,7 +1,9 @@
 package com.chatroom.app
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -109,7 +111,6 @@ private fun ChatRoomAppContent(
 
     // Repo login overlay state
     var showRepoLogin by remember { mutableStateOf(false) }
-    var repoLoginUrl by remember { mutableStateOf("") }
     var repoAuthToken by remember { mutableStateOf<String?>(null) }
 
     // Auto-create terminal sessions for coding assistant sessions
@@ -167,8 +168,12 @@ private fun ChatRoomAppContent(
                 repoAuthToken = repoAuthToken,
                 onRepoAuthConsumed = { repoAuthToken = null },
                 onOpenRepoLogin = { url ->
-                    repoLoginUrl = url
                     showRepoLogin = true
+                    // Open system browser for OAuth
+                    try {
+                        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        context.startActivity(browserIntent)
+                    } catch (_: Exception) { }
                 },
                 onBack = { currentDestination = SidebarDestination.Main }
             )
@@ -207,7 +212,6 @@ private fun ChatRoomAppContent(
         // Repo login overlay (full screen above everything)
         if (showRepoLogin) {
             RepoLoginScreen(
-                repoUrl = repoLoginUrl,
                 onLoginSuccess = { token ->
                     repoAuthToken = token
                     Toast.makeText(context, "仓库授权成功", Toast.LENGTH_SHORT).show()

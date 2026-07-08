@@ -1,256 +1,103 @@
 package com.chatroom.app.ui.screens
 
-import android.annotation.SuppressLint
-import android.graphics.Bitmap
-import android.view.ViewGroup
-import android.webkit.WebChromeClient
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import com.chatroom.app.R
 
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun RepoLoginScreen(
-    repoUrl: String,
     onLoginSuccess: (token: String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isLoading by remember { mutableStateOf(true) }
-    var currentUrl by remember { mutableStateOf("") }
-    var progress by remember { mutableStateOf(0) }
-    var webView by remember { mutableStateOf<WebView?>(null) }
-
     Column(
         modifier = modifier
             .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        // Header
-        Row(
+        Icon(
+            imageVector = Icons.Default.OpenInBrowser,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "请在浏览器中完成授权",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "浏览器已自动打开，请登录并授权。\n完成后回到本应用点击确认。",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        Button(
+            onClick = { onLoginSuccess("authorized") },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 4.dp, top = 48.dp, end = 16.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .height(52.dp),
+            shape = RoundedCornerShape(14.dp)
         ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.size(44.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
-            Spacer(modifier = Modifier.width(4.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.wizard_login_required),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = currentUrl.ifBlank { repoUrl },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            // Refresh button
-            IconButton(
-                onClick = { webView?.reload() },
-                modifier = Modifier.size(44.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Refresh",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-
-        // Loading indicator
-        if (isLoading) {
-            LinearProgressIndicator(
-                progress = progress / 100f,
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.primary
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
             )
-        }
-
-        // WebView
-        Box(modifier = Modifier.weight(1f)) {
-            AndroidView(
-                factory = { context ->
-                    WebView(context).apply {
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        settings.useWideViewPort = true
-                        settings.loadWithOverviewMode = true
-
-                        webViewClient = object : WebViewClient() {
-                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                                super.onPageStarted(view, url, favicon)
-                                currentUrl = url ?: ""
-                                isLoading = true
-                            }
-
-                            override fun onPageFinished(view: WebView?, url: String?) {
-                                super.onPageFinished(view, url)
-                                isLoading = false
-                                currentUrl = url ?: ""
-
-                                // Detect OAuth callback with token
-                                url?.let { detectedUrl ->
-                                    if (detectedUrl.contains("code=") ||
-                                        detectedUrl.contains("token=") ||
-                                        detectedUrl.contains("access_token=")) {
-                                        val token = extractToken(detectedUrl)
-                                        if (token != null) {
-                                            onLoginSuccess(token)
-                                        }
-                                    }
-                                }
-                            }
-
-                            override fun shouldOverrideUrlLoading(
-                                view: WebView?,
-                                url: String?
-                            ): Boolean {
-                                return super.shouldOverrideUrlLoading(view, url)
-                            }
-                        }
-
-                        webChromeClient = object : WebChromeClient() {
-                            override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                                progress = newProgress
-                            }
-                        }
-
-                        // Load the repo URL
-                        loadUrl(repoUrl)
-                    }
-                    webView = this
-                },
-                modifier = Modifier.fillMaxSize()
-            )
-
-            // Error or hint overlay (when loading is done but showing login form)
-            if (!isLoading && currentUrl.contains("login") || currentUrl.contains("auth")) {
-                // OAuth login page is showing - this is expected
-            }
-        }
-
-        // Bottom navigation bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Cancel",
-                    tint = MaterialTheme.colorScheme.error
-                )
-            }
-            // Refresh button
-            IconButton(
-                onClick = { webView?.reload() },
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Refresh",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Spacer(modifier = Modifier.size(8.dp))
             Text(
-                text = "登录授权后点击 ✓ 完成",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.align(Alignment.CenterVertically)
+                text = "已完成授权",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
             )
-            IconButton(
-                onClick = { onLoginSuccess("authorized") },
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Done",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedButton(
+            onClick = onBack,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Text(
+                text = "取消",
+                style = MaterialTheme.typography.titleMedium
+            )
         }
     }
-}
-
-/**
- * Extract OAuth token from callback URL.
- * Supports: code=xxx, token=xxx, access_token=xxx
- */
-private fun extractToken(url: String): String? {
-    val uri = android.net.Uri.parse(url)
-    // Check query parameters
-    uri.getQueryParameter("code")?.let { return it }
-    uri.getQueryParameter("token")?.let { return it }
-    uri.getQueryParameter("access_token")?.let { return it }
-    // Check fragment
-    val fragment = uri.fragment ?: return null
-    fragment.split("&").forEach { param ->
-        val parts = param.split("=", limit = 2)
-        if (parts.size == 2 && parts[0] == "access_token") return parts[1]
-    }
-    return null
 }
