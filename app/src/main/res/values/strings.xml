@@ -54,10 +54,6 @@
 
     <!-- Web Search -->
     <string name="web_search_title">Web Search</string>
-    <string name="search_endpoint">Search API Endpoint</string>
-    <string name="search_endpoint_hint">https://api.duckduckgo.com/?q={query}&amp;format=json</string>
-    <string name="search_api_key">Search API Key (optional)</string>
-    <string name="search_api_key_hint">Leave blank for DuckDuckGo</string>
     <string name="search_desc">Use {query} as placeholder. DuckDuckGo is the default (no key needed).</string>
 
     <!-- API Keys -->

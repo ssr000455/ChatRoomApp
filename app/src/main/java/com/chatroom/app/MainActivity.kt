@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
@@ -88,6 +89,12 @@ private fun ChatRoomAppContent(
     val uiState by chatViewModel.uiState.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // BackHandler: close sidebar → navigate home → system back
+        BackHandler(enabled = isSidebarOpen) { isSidebarOpen = false }
+        BackHandler(enabled = !isSidebarOpen && currentDestination != SidebarDestination.Main) {
+            currentDestination = SidebarDestination.Main
+        }
+
         // Main content
         AppNavigation(
             currentDestination = currentDestination,

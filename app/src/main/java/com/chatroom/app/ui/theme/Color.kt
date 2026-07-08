@@ -50,12 +50,3 @@ val AiBubbleDark = Color(0xFF2A2D33)
 val AiTextLight = Color(0xFF1A1C1E)
 val AiTextDark = Color(0xFFE2E2E6)
 
-// ── Sidebar ──
-val SidebarLight = Color(0xFFFFFFFF)
-val SidebarDark = Color(0xFF1A1C21)
-val SidebarDividerLight = Color(0xFFE5E5EA)
-val SidebarDividerDark = Color(0xFF2C2C30)
-val SidebarItemHoverLight = Color(0xFFF0F1F3)
-val SidebarItemHoverDark = Color(0xFF2A2D33)
-val SidebarSelectedLight = Color(0xFFD4E4FF)
-val SidebarSelectedDark = Color(0xFF003258)

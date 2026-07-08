@@ -1,4 +1,5 @@
 *.iml
+claude.sh
 .gradle
 /local.properties
 /.idea

@@ -54,10 +54,6 @@
 
     <!-- Web Search -->
     <string name="web_search_title">联网搜索</string>
-    <string name="search_endpoint">搜索 API 地址</string>
-    <string name="search_endpoint_hint">https://api.duckduckgo.com/?q={query}&amp;format=json</string>
-    <string name="search_api_key">搜索 API 密钥（可选）</string>
-    <string name="search_api_key_hint">留空则使用 DuckDuckGo</string>
     <string name="search_desc">用 {query} 作为占位符。默认使用 DuckDuckGo（无需密钥）。</string>
 
     <!-- API Keys -->
