@@ -1,9 +1,7 @@
 package com.chatroom.app
 
 import android.content.Context
-import android.content.Intent
 import android.content.res.Configuration
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -30,7 +28,6 @@ import com.chatroom.app.navigation.AppNavigation
 import com.chatroom.app.terminal.TerminalSession
 import com.chatroom.app.ui.components.Sidebar
 import com.chatroom.app.ui.components.SidebarDestination
-import com.chatroom.app.ui.screens.RepoLoginScreen
 import com.chatroom.app.ui.theme.ChatRoomTheme
 import com.chatroom.app.viewmodel.ApiAccountViewModel
 import com.chatroom.app.viewmodel.ChatViewModel
@@ -109,16 +106,18 @@ private fun ChatRoomAppContent(
     // Terminal sessions per coding assistant session
     val terminalSessions = remember { mutableStateMapOf<String, TerminalSession>() }
 
-    // Repo login overlay state
-    var showRepoLogin by remember { mutableStateOf(false) }
-    var repoAuthToken by remember { mutableStateOf<String?>(null) }
-
     // Auto-create terminal sessions for coding assistant sessions
     LaunchedEffect(sessions) {
         sessions.filter { it.isCodingAssistant }.forEach { session ->
             if (!terminalSessions.containsKey(session.id)) {
                 val ts = TerminalSession("Terminal-${session.id}")
-                ts.start(session.localPath.ifBlank { "/" })
+                // Use app sandbox for terminal (exec permission required)
+                val workDir = if (session.repoName.isNotBlank()) {
+                    context.filesDir.resolve("workspace").resolve(session.repoName).absolutePath
+                } else {
+                    context.filesDir.resolve("workspace").absolutePath
+                }
+                ts.start(workDir)
                 terminalSessions[session.id] = ts
             }
         }
@@ -141,9 +140,8 @@ private fun ChatRoomAppContent(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // BackHandler: repo login -> wizard -> main -> system back
-        BackHandler(enabled = showRepoLogin) { showRepoLogin = false }
-        BackHandler(enabled = !showRepoLogin && !isSidebarOpen && currentDestination != SidebarDestination.Main) {
+        // BackHandler: wizard -> main -> system back
+        BackHandler(enabled = !isSidebarOpen && currentDestination != SidebarDestination.Main) {
             currentDestination = SidebarDestination.Main
         }
         BackHandler(enabled = isSidebarOpen) { isSidebarOpen = false }
@@ -165,16 +163,6 @@ private fun ChatRoomAppContent(
             // Show wizard directly (outside AnimatedContent to avoid conflicts)
             CodingAssistantScreen(
                 chatViewModel = chatViewModel,
-                repoAuthToken = repoAuthToken,
-                onRepoAuthConsumed = { repoAuthToken = null },
-                onOpenRepoLogin = { url ->
-                    showRepoLogin = true
-                    // Open system browser for OAuth
-                    try {
-                        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                        context.startActivity(browserIntent)
-                    } catch (_: Exception) { }
-                },
                 onBack = { currentDestination = SidebarDestination.Main }
             )
         }
@@ -208,27 +196,12 @@ private fun ChatRoomAppContent(
             },
             onClose = { isSidebarOpen = false }
         )
-
-        // Repo login overlay (full screen above everything)
-        if (showRepoLogin) {
-            RepoLoginScreen(
-                onLoginSuccess = { token ->
-                    repoAuthToken = token
-                    Toast.makeText(context, "仓库授权成功", Toast.LENGTH_SHORT).show()
-                    showRepoLogin = false
-                },
-                onBack = { showRepoLogin = false }
-            )
-        }
     }
 }
 
 @Composable
 private fun CodingAssistantScreen(
     chatViewModel: ChatViewModel,
-    repoAuthToken: String?,
-    onRepoAuthConsumed: () -> Unit,
-    onOpenRepoLogin: (String) -> Unit,
     onBack: () -> Unit
 ) {
     val sessions by chatViewModel.sessions.collectAsState()
@@ -238,15 +211,12 @@ private fun CodingAssistantScreen(
     com.chatroom.app.ui.screens.CodingAssistantWizardScreen(
         apiAccounts = apiAccounts,
         currentCodingAssistantCount = codingAssistantCount,
-        repoAuthToken = repoAuthToken,
-        onRepoAuthConsumed = onRepoAuthConsumed,
-        onCreate = { apiAccountId, systemPrompt, repoUrl, repoOwner, repoName ->
+        onCreate = { apiAccountId, systemPrompt, repoUrl, repoOwner, repoName, repoToken ->
             chatViewModel.createCodingAssistantSession(
-                apiAccountId, systemPrompt, repoUrl, repoOwner, repoName
+                apiAccountId, systemPrompt, repoUrl, repoOwner, repoName, repoToken
             )
             onBack()
         },
-        onOpenRepoLogin = onOpenRepoLogin,
         onBack = onBack
     )
 }

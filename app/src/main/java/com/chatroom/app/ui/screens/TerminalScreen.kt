@@ -40,11 +40,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
@@ -182,6 +180,15 @@ fun TerminalScreen(
                         fontSize = 11.sp,
                         color = textColor.copy(alpha = 0.6f)
                     ),
+                    modifier = Modifier.padding(bottom = 2.dp)
+                )
+                Text(
+                    text = "Install tools: pkg install git curl wget tree nano vim",
+                    style = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        color = textColor.copy(alpha = 0.4f)
+                    ),
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
@@ -212,14 +219,7 @@ fun TerminalScreen(
 
             // Input line with Enter key handling
             item {
-                Row(
-                    modifier = Modifier.onPreviewKeyEvent { event ->
-                        if (event.key == Key.Enter && event.type == KeyEventType.KeyUp) {
-                            executeCommand()
-                            true
-                        } else false
-                    }
-                ) {
+                Row {
                     Text(
                         text = prompt,
                         style = TextStyle(
@@ -239,6 +239,8 @@ fun TerminalScreen(
                             ),
                             cursorBrush = SolidColor(textColor),
                             singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                            keyboardActions = KeyboardActions(onSend = { executeCommand() }),
                             modifier = Modifier.fillMaxWidth(),
                             decorationBox = { innerTextField ->
                                 if (inputValue.text.isEmpty()) {

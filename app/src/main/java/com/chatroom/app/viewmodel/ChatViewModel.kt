@@ -123,18 +123,26 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         systemPrompt: String = "You are an expert coding assistant.",
         repoUrl: String = "",
         repoOwner: String = "",
-        repoName: String = ""
+        repoName: String = "",
+        repoToken: String = ""
     ) {
         viewModelScope.launch {
+            // Calculate session index and storage path
+            val currentCount = sessions.value.count { it.isCodingAssistant }
+            val sessionIndex = currentCount + 1
+            val basePath = "/storage/emulated/0/ChatRoom/编程会话-${sessionIndex}"
+
             val session = Session(
                 title = if (repoName.isNotBlank()) repoName else "Coding Assistant",
                 type = SessionType.CODING_ASSISTANT,
-                mode = SessionMode.CHAT,
+                mode = SessionMode.REPO_HOME,
                 apiAccountId = apiAccountId,
                 systemPrompt = systemPrompt,
                 repoUrl = repoUrl,
                 repoOwner = repoOwner,
                 repoName = repoName,
+                repoToken = repoToken,
+                localPath = basePath,
                 repoBranch = "main"
             )
             sessionRepo.createSession(session)

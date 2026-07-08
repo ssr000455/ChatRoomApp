@@ -39,7 +39,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,10 +59,7 @@ enum class WizardStep { SELECT_API, SYSTEM_PROMPT, CONNECT_REPO }
 fun CodingAssistantWizardScreen(
     apiAccounts: List<ApiAccount>,
     currentCodingAssistantCount: Int,
-    repoAuthToken: String?,
-    onRepoAuthConsumed: () -> Unit,
-    onCreate: (apiAccountId: String, systemPrompt: String, repoUrl: String, repoOwner: String, repoName: String) -> Unit,
-    onOpenRepoLogin: (repoUrl: String) -> Unit,
+    onCreate: (apiAccountId: String, systemPrompt: String, repoUrl: String, repoOwner: String, repoName: String, repoToken: String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -77,14 +73,7 @@ fun CodingAssistantWizardScreen(
     var repoOwner by remember { mutableStateOf("") }
     var repoName by remember { mutableStateOf("") }
     var selectedProvider by remember { mutableStateOf<String?>(null) }
-
-    // Handle auth token arrival
-    LaunchedEffect(repoAuthToken) {
-        if (repoAuthToken != null && !repoConnected) {
-            repoConnected = true
-            onRepoAuthConsumed()
-        }
-    }
+    var repoToken by remember { mutableStateOf("") }
 
     val canProceedStep1 = selectedApiAccountId != null
     val hasValidRepoUrl = repoConnected && repoUrl.isNotBlank() &&
@@ -164,6 +153,7 @@ fun CodingAssistantWizardScreen(
                 )
                 WizardStep.CONNECT_REPO -> ConnectRepoStep(
                     repoUrl = repoUrl,
+                    repoToken = repoToken,
                     repoConnected = repoConnected,
                     selectedProvider = selectedProvider,
                     onSelectProvider = { provider ->
@@ -174,23 +164,23 @@ fun CodingAssistantWizardScreen(
                         }
                     },
                     onRepoUrlChange = { repoUrl = it },
+                    onRepoTokenChange = { repoToken = it },
                     onConnect = {
-                        if (repoUrl.isNotBlank()) {
+                        if (repoUrl.isNotBlank() && repoToken.isNotBlank()) {
                             val uri = Uri.parse(repoUrl)
                             val segments = uri.pathSegments
                             if (segments.size >= 2) {
                                 repoOwner = segments[0]
                                 repoName = segments[1].removeSuffix(".git")
                             }
-                            // Open the provider's login page for authorization
-                            val authUrl = getProviderAuthUrl(selectedProvider, repoUrl)
-                            onOpenRepoLogin(authUrl)
+                            repoConnected = true
                         }
                     },
                     onDisconnect = {
                         repoConnected = false
                         repoOwner = ""
                         repoName = ""
+                        repoToken = ""
                         repoUrl = selectedProvider?.let { getProviderBaseUrl(it) } ?: ""
                     }
                 )
@@ -230,7 +220,8 @@ fun CodingAssistantWizardScreen(
                                 systemPrompt,
                                 repoUrl,
                                 parsedOwner,
-                                parsedName
+                                parsedName,
+                                repoToken
                             )
                         }
                     },
@@ -469,10 +460,12 @@ private fun SystemPromptStep(
 @Composable
 private fun ConnectRepoStep(
     repoUrl: String,
+    repoToken: String,
     repoConnected: Boolean,
     selectedProvider: String?,
     onSelectProvider: (String) -> Unit,
     onRepoUrlChange: (String) -> Unit,
+    onRepoTokenChange: (String) -> Unit,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit
 ) {
@@ -490,7 +483,7 @@ private fun ConnectRepoStep(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "选择代码托管平台，点击授权直接登录以连接仓库。",
+            text = "选择代码托管平台，填入个人访问令牌（Personal Access Token）和仓库地址。",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -499,9 +492,7 @@ private fun ConnectRepoStep(
         // Provider selection cards
         val providers = listOf(
             Triple("GitHub", "github.com", 0xFF24292F),
-            Triple("Gitee", "gitee.com", 0xFFC71D23),
-            Triple("GitLab", "gitlab.com", 0xFFFC6D26),
-            Triple("Bitbucket", "bitbucket.org", 0xFF0052CC)
+            Triple("Gitee", "gitee.com", 0xFFC71D23)
         )
 
         Row(
@@ -554,9 +545,8 @@ private fun ConnectRepoStep(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Auth status & actions
         if (repoConnected) {
-            // Connected state - show success card and repo URL input
+            // Connected state
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -579,15 +569,16 @@ private fun ConnectRepoStep(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "已授权：${selectedProvider ?: "Git Provider"}",
+                            text = "已连接：${selectedProvider ?: "Git Provider"}",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "已登录授权成功，请输入仓库完整地址",
+                            text = repoUrl,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
                         )
                     }
                     OutlinedButton(
@@ -604,10 +595,50 @@ private fun ConnectRepoStep(
                     }
                 }
             }
+        } else {
+            // Not connected - show PAT input + repo URL
+            Text(
+                text = "Personal Access Token",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = when (selectedProvider) {
+                    "GitHub" -> "在 GitHub Settings → Developer settings → Personal access tokens 生成"
+                    "Gitee" -> "在 Gitee 设置 → 安全设置 → 私人令牌 生成"
+                    else -> "请先生成个人访问令牌"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = repoToken,
+                onValueChange = onRepoTokenChange,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                placeholder = { Text("ghp_xxxxxxxxxxxxxxxxxxxx", style = MaterialTheme.typography.bodyMedium) },
+                singleLine = true,
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.VpnKey,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Repo URL input for entering actual repo after auth
+            Text(
+                text = "仓库地址",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = repoUrl,
                 onValueChange = onRepoUrlChange,
@@ -615,33 +646,14 @@ private fun ConnectRepoStep(
                 shape = RoundedCornerShape(12.dp),
                 placeholder = {
                     Text(
-                        "https://github.com/owner/repo",
+                        when (selectedProvider) {
+                            "GitHub" -> "https://github.com/owner/repo"
+                            "Gitee" -> "https://gitee.com/owner/repo"
+                            else -> "https://github.com/owner/repo"
+                        },
                         style = MaterialTheme.typography.bodyMedium
                     )
                 },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Link,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                },
-                singleLine = true
-            )
-        } else {
-            // Not connected - show repo URL input and authorize button
-            OutlinedTextField(
-                value = repoUrl,
-                onValueChange = { if (!repoConnected) onRepoUrlChange(it) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                placeholder = {
-                    Text(
-                        "https://github.com/owner/repo",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                },
-                enabled = !repoConnected,
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Code,
@@ -652,11 +664,11 @@ private fun ConnectRepoStep(
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Button(
                 onClick = onConnect,
-                enabled = repoUrl.isNotBlank(),
+                enabled = repoUrl.isNotBlank() && repoToken.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -666,13 +678,13 @@ private fun ConnectRepoStep(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("授权连接")
+                Text("连接仓库")
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "点击后将在应用中打开授权页面，登录后点击 ✓ 完成授权",
+                text = "令牌仅保存在本地，用于克隆和访问仓库代码",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier.padding(horizontal = 4.dp)
@@ -686,20 +698,14 @@ private fun getProviderBaseUrl(provider: String): String {
     return when (provider) {
         "GitHub" -> "https://github.com/"
         "Gitee" -> "https://gitee.com/"
-        "GitLab" -> "https://gitlab.com/"
-        "Bitbucket" -> "https://bitbucket.org/"
         else -> "https://"
     }
 }
 
 private fun getProviderAuthUrl(provider: String?, repoUrl: String): String {
-    // Use provider-specific login pages for authorization
-    val loginUrl = when (provider) {
+    return when (provider) {
         "GitHub" -> "https://github.com/login"
         "Gitee" -> "https://gitee.com/login"
-        "GitLab" -> "https://gitlab.com/users/sign_in"
-        "Bitbucket" -> "https://bitbucket.org/account/signin/"
         else -> repoUrl
     }
-    return loginUrl
 }

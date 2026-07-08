@@ -126,7 +126,7 @@ private fun MainContentRouter(
         }
     } else if (isCodingAssistant && mode == SessionMode.REPO_HOME) {
         RepoBrowserScreen(
-            initialUrl = activeSession!!.repoUrl,
+            activeSession = activeSession,
             onToggleSidebar = onToggleSidebar
         )
     } else {
