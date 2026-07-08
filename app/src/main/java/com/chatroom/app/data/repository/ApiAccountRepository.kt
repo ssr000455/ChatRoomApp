@@ -71,4 +71,15 @@ class ApiAccountRepository(private val context: Context) {
             prefs[ACTIVE_ID_KEY] = accountId
         }
     }
+
+    suspend fun replaceAll(accounts: List<ApiAccount>, activeId: String?) {
+        context.apiDataStore.edit { prefs ->
+            prefs[ACCOUNTS_KEY] = gson.toJson(accounts)
+            if (activeId != null && accounts.any { it.id == activeId }) {
+                prefs[ACTIVE_ID_KEY] = activeId
+            } else {
+                prefs.remove(ACTIVE_ID_KEY)
+            }
+        }
+    }
 }

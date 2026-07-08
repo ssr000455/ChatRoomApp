@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Person
@@ -55,9 +56,10 @@ import com.chatroom.app.data.model.Session
 import com.chatroom.app.ui.components.SidebarDestination.ApiKeys
 import com.chatroom.app.ui.components.SidebarDestination.Identities
 import com.chatroom.app.ui.components.SidebarDestination.Main
+import com.chatroom.app.ui.components.SidebarDestination.Profile
 import com.chatroom.app.ui.components.SidebarDestination.Settings
 
-enum class SidebarDestination { Main, Settings, Sessions, ApiKeys, Identities }
+enum class SidebarDestination { Main, Settings, Sessions, ApiKeys, Identities, Profile }
 
 @Composable
 fun Sidebar(
@@ -148,6 +150,12 @@ fun Sidebar(
                         label = stringResource(R.string.api_keys),
                         isSelected = currentDestination == ApiKeys,
                         onClick = { onNavigate(ApiKeys); onClose() }
+                    )
+                    SidebarButton(
+                        icon = Icons.Default.Face,
+                        label = stringResource(R.string.user_profile),
+                        isSelected = currentDestination == Profile,
+                        onClick = { onNavigate(Profile); onClose() }
                     )
                     SidebarButton(
                         icon = Icons.Default.Person,

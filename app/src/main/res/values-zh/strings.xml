@@ -32,6 +32,9 @@
     <string name="search_sources">搜索来源（%d个）</string>
     <string name="more_sources">还有 %d 个来源</string>
     <string name="follow_up">追问</string>
+    <string name="recall">撤回</string>
+    <string name="rewrite">改写</string>
+    <string name="delete_message">删除</string>
     <string name="stop">停止</string>
 
     <!-- Settings -->
@@ -70,6 +73,7 @@
     <string name="reasoning_model_placeholder">例如 o1-mini, o1-preview, deepseek-r1</string>
     <string name="delete_api_key">删除</string>
     <string name="save_api_key">保存</string>
+    <string name="edit_api_key">编辑</string>
     <string name="copy_code">复制代码</string>
     <string name="copied">已复制！</string>
 
@@ -94,6 +98,43 @@
     <string name="max_identities">最多 10 个身份</string>
     <string name="add_photo">添加头像</string>
     <string name="no_identities_hint">暂无身份。\n创建一个来个性化你的AI。</string>
+
+    <!-- User Profile -->
+    <string name="user_profile_title">用户资料</string>
+    <string name="user_profile">用户资料</string>
+    <string name="new_profile">新建资料</string>
+    <string name="create_profile_hint">创建你的虚拟身份以开始使用</string>
+    <string name="no_profiles_hint">暂无资料。\n创建一个以开始使用。</string>
+    <string name="user_profile_name">昵称 *</string>
+    <string name="user_profile_name_hint">例如 小明</string>
+    <string name="user_profile_gender">性别</string>
+    <string name="user_profile_gender_hint">例如 男、女</string>
+    <string name="user_profile_personality">性格</string>
+    <string name="user_profile_personality_hint">例如 外向、好奇、细心</string>
+    <string name="user_profile_hobbies">爱好兴趣</string>
+    <string name="user_profile_hobbies_hint">描述你喜欢做什么…</string>
+    <string name="user_profile_background">身份背景</string>
+    <string name="user_profile_background_hint">描述你的背景…</string>
+    <string name="save_profile">保存资料</string>
+    <string name="edit_profile">编辑资料</string>
+    <string name="create_profile">创建</string>
+    <string name="delete_profile">删除</string>
+    <string name="logout_profile">退出登录</string>
+    <string name="logged_in_as">已登录：%s</string>
+    <string name="logged_in_badge">已登录</string>
+
+    <!-- Backup & Restore -->
+    <string name="backup_title">备份与恢复</string>
+    <string name="export_backup">导出备份</string>
+    <string name="import_backup">导入备份</string>
+    <string name="backup_success">备份导出成功</string>
+    <string name="import_success">备份恢复成功</string>
+    <string name="backup_failed">备份失败</string>
+    <string name="import_failed">恢复失败</string>
+    <string name="backup_desc">所有数据将保存到 Download/ChatRoom_backup.json。重新安装后，应用将自动从此文件恢复。</string>
+    <string name="importing">正在从备份恢复…</string>
+    <string name="exporting">正在导出备份…</string>
+    <string name="restored_from_backup">已从备份文件恢复数据</string>
 
     <!-- Sessions -->
     <string name="sessions_title">会话历史</string>

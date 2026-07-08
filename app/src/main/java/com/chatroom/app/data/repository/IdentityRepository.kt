@@ -79,4 +79,15 @@ class IdentityRepository(private val context: Context) {
     suspend fun canAddMore(): Boolean {
         return identities.first().size < MAX_IDENTITIES
     }
+
+    suspend fun replaceAll(identities: List<Identity>, activeId: String?) {
+        context.identityDataStore.edit { prefs ->
+            prefs[LIST_KEY] = gson.toJson(identities)
+            if (activeId != null && identities.any { it.id == activeId }) {
+                prefs[ACTIVE_ID_KEY] = activeId
+            } else {
+                prefs.remove(ACTIVE_ID_KEY)
+            }
+        }
+    }
 }

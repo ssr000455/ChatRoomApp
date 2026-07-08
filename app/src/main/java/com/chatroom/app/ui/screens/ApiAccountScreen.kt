@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Star
@@ -66,6 +67,7 @@ fun ApiAccountScreen(
     val accounts by viewModel.accounts.collectAsState()
     val active by viewModel.activeAccount.collectAsState()
     val showForm by viewModel.showForm.collectAsState()
+    val editingAccount by viewModel.editingAccount.collectAsState()
 
     Column(
         modifier = modifier
@@ -125,7 +127,16 @@ fun ApiAccountScreen(
                 enter = fadeIn(animationSpec = tween(200)),
                 exit = fadeOut(animationSpec = tween(200))
             ) {
-                AddApiAccountForm(onSave = { viewModel.addAccount(it) })
+                AddApiAccountForm(
+                    existingAccount = editingAccount,
+                    onSave = { account ->
+                        if (editingAccount != null) {
+                            viewModel.updateAccount(account)
+                        } else {
+                            viewModel.addAccount(account)
+                        }
+                    }
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -150,6 +161,7 @@ fun ApiAccountScreen(
                             account = account,
                             isActive = account.id == active?.id,
                             onActivate = { viewModel.setActive(account.id) },
+                            onEdit = { viewModel.startEdit(account) },
                             onDelete = { viewModel.deleteAccount(account.id) }
                         )
                     }
@@ -160,12 +172,15 @@ fun ApiAccountScreen(
 }
 
 @Composable
-private fun AddApiAccountForm(onSave: (ApiAccount) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var apiKey by remember { mutableStateOf("") }
-    var apiBaseUrl by remember { mutableStateOf("https://api.openai.com/v1") }
-    var model by remember { mutableStateOf("gpt-4o") }
-    var reasoningModel by remember { mutableStateOf("o1-mini") }
+private fun AddApiAccountForm(
+    existingAccount: ApiAccount?,
+    onSave: (ApiAccount) -> Unit
+) {
+    var name by remember { mutableStateOf(existingAccount?.name ?: "") }
+    var apiKey by remember { mutableStateOf(existingAccount?.apiKey ?: "") }
+    var apiBaseUrl by remember { mutableStateOf(existingAccount?.apiBaseUrl ?: "https://api.openai.com/v1") }
+    var model by remember { mutableStateOf(existingAccount?.model ?: "gpt-4o") }
+    var reasoningModel by remember { mutableStateOf(existingAccount?.reasoningModel ?: "o1-mini") }
 
     Column(
         modifier = Modifier
@@ -223,12 +238,24 @@ private fun AddApiAccountForm(onSave: (ApiAccount) -> Unit) {
         )
         Spacer(modifier = Modifier.height(12.dp))
         Button(
-            onClick = { onSave(ApiAccount(name = name, apiKey = apiKey, apiBaseUrl = apiBaseUrl, model = model, reasoningModel = reasoningModel)) },
+            onClick = {
+                onSave(ApiAccount(
+                    id = existingAccount?.id ?: "",
+                    name = name,
+                    apiKey = apiKey,
+                    apiBaseUrl = apiBaseUrl,
+                    model = model,
+                    reasoningModel = reasoningModel
+                ))
+            },
             enabled = name.isNotBlank() && apiKey.isNotBlank(),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(14.dp)
         ) {
-            Text(stringResource(R.string.save_api_key))
+            Text(
+                if (existingAccount != null) stringResource(R.string.save_api_key)
+                else stringResource(R.string.add_api_key)
+            )
         }
     }
 }
@@ -238,6 +265,7 @@ private fun ApiAccountCard(
     account: ApiAccount,
     isActive: Boolean,
     onActivate: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var showKey by remember { mutableStateOf(false) }
@@ -307,6 +335,14 @@ private fun ApiAccountCard(
                         )
                     }
                 }
+            }
+            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = stringResource(R.string.edit_api_key),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
+                )
             }
             IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
                 Icon(

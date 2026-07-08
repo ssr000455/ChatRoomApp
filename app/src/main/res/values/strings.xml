@@ -32,6 +32,9 @@
     <string name="search_sources">Search sources (%d)</string>
     <string name="more_sources">%d more sources</string>
     <string name="follow_up">Follow up</string>
+    <string name="recall">Recall</string>
+    <string name="rewrite">Rewrite</string>
+    <string name="delete_message">Delete</string>
     <string name="stop">Stop</string>
 
     <!-- Settings -->
@@ -70,6 +73,7 @@
     <string name="reasoning_model_placeholder">e.g. o1-mini, o1-preview</string>
     <string name="delete_api_key">Delete</string>
     <string name="save_api_key">Save</string>
+    <string name="edit_api_key">Edit</string>
     <string name="copy_code">Copy code</string>
     <string name="copied">Copied!</string>
 
@@ -94,6 +98,43 @@
     <string name="max_identities">Maximum 10 identities</string>
     <string name="add_photo">Add Photo</string>
     <string name="no_identities_hint">No identities yet.\nCreate one to personalize your AI.</string>
+
+    <!-- User Profile -->
+    <string name="user_profile_title">User Profile</string>
+    <string name="user_profile">User Profile</string>
+    <string name="new_profile">New Profile</string>
+    <string name="create_profile_hint">Create your virtual identity to get started</string>
+    <string name="no_profiles_hint">No profiles yet.\nCreate one to get started.</string>
+    <string name="user_profile_name">Name *</string>
+    <string name="user_profile_name_hint">e.g. Alice</string>
+    <string name="user_profile_gender">Gender</string>
+    <string name="user_profile_gender_hint">e.g. Male, Female</string>
+    <string name="user_profile_personality">Personality</string>
+    <string name="user_profile_personality_hint">e.g. outgoing, curious, thoughtful</string>
+    <string name="user_profile_hobbies">Hobbies & Interests</string>
+    <string name="user_profile_hobbies_hint">Describe what you enjoy doing…</string>
+    <string name="user_profile_background">Background</string>
+    <string name="user_profile_background_hint">Describe your background…</string>
+    <string name="save_profile">Save Profile</string>
+    <string name="edit_profile">Edit Profile</string>
+    <string name="create_profile">Create</string>
+    <string name="delete_profile">Delete</string>
+    <string name="logout_profile">Logout</string>
+    <string name="logged_in_as">Logged in as %s</string>
+    <string name="logged_in_badge">Logged In</string>
+
+    <!-- Backup & Restore -->
+    <string name="backup_title">Backup & Restore</string>
+    <string name="export_backup">Export Backup</string>
+    <string name="import_backup">Import Backup</string>
+    <string name="backup_success">Backup exported successfully</string>
+    <string name="import_success">Backup restored successfully</string>
+    <string name="backup_failed">Backup failed</string>
+    <string name="import_failed">Restore failed</string>
+    <string name="backup_desc">All data will be saved to Download/ChatRoom_backup.json. On reinstall, the app will auto-restore from this file.</string>
+    <string name="importing">Restoring from backup…</string>
+    <string name="exporting">Exporting backup…</string>
+    <string name="restored_from_backup">Data restored from backup file</string>
 
     <!-- Sessions -->
     <string name="sessions_title">Session History</string>

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -25,10 +26,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Psychology
@@ -51,8 +52,10 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,12 +64,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.chatroom.app.R
 import com.chatroom.app.data.model.ChatMessage
+import kotlinx.coroutines.launch
 import com.chatroom.app.ui.components.ChatBubble
 import com.chatroom.app.ui.components.ThinkingIndicator
 import com.chatroom.app.viewmodel.ChatViewModel
@@ -84,9 +87,23 @@ fun ChatScreen(
     val activeIdentity by viewModel.activeIdentity.collectAsState()
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+
+    val messages = activeSession?.messages ?: emptyList()
+
+    // Show scroll-to-bottom button when not at the last message
+    val showScrollToBottom by remember {
+        derivedStateOf {
+            val msgs = activeSession?.messages ?: emptyList<ChatMessage>()
+            if (msgs.isEmpty()) false
+            else {
+                val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()
+                lastVisible != null && lastVisible.index < msgs.size - 1
+            }
+        }
+    }
 
     // Auto-scroll to bottom only if user is near the bottom
-    val messages = activeSession?.messages ?: emptyList()
     // Track the last AI message by ID for reliable regenerate callback
     val lastAiMessageId = remember(messages) {
         messages.lastOrNull { it.role == "assistant" }?.id
@@ -94,10 +111,17 @@ fun ChatScreen(
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
-            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()
-            val nearBottom = lastVisible != null && lastVisible.index >= messages.size - 3
-            if (nearBottom) {
+            val lastMessage = messages.lastOrNull()
+            if (lastMessage?.role == "user") {
+                // Always scroll to bottom when user sends a message
                 listState.scrollToItem(messages.size - 1)
+            } else {
+                // For AI responses, only scroll if user is near the bottom
+                val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()
+                val nearBottom = lastVisible != null && lastVisible.index >= messages.size - 3
+                if (nearBottom) {
+                    listState.scrollToItem(messages.size - 1)
+                }
             }
         }
     }
@@ -106,6 +130,8 @@ fun ChatScreen(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .imePadding()
+            .navigationBarsPadding()
     ) {
         // Custom top bar
         Box(
@@ -246,14 +272,21 @@ fun ChatScreen(
                 ) {
                     items(messages, key = { it.id }) { message ->
                         val isLastAi = message.role == "assistant" && message.id == lastAiMessageId
+                        val isRecallable = message.role == "user" && messages.indexOfLast { it.role == "user" } == messages.indexOf(message)
                         ChatBubble(
                             message = message,
                             isLastMessage = message == messages.lastOrNull(),
                             onRegenerate = if (isLastAi && !uiState.isSending)
                                 ({ viewModel.regenerateLastResponse() }) else null,
                             onFollowUp = if (!uiState.isSending) ({ content ->
-                                viewModel.updateInput("\"$content\" ")
+                                viewModel.setReferencedContent(content)
                             }) else null,
+                            onRecall = if (!uiState.isSending && isRecallable)
+                                ({ viewModel.recallLastMessage() }) else null,
+                            onDelete = if (!uiState.isSending && message.role == "assistant")
+                                ({ viewModel.deleteMessage(message.id) }) else null,
+                            onRewrite = if (!uiState.isSending && message.role == "assistant")
+                                ({ viewModel.rewriteMessage(message.id) }) else null,
                             searchSources = if (isLastAi) uiState.searchSources else emptyList()
                         )
                     }
@@ -263,6 +296,35 @@ fun ChatScreen(
                             ThinkingIndicator(elapsedSeconds = uiState.thinkingElapsed)
                         }
                     }
+                }
+            }
+
+            // Scroll-to-bottom floating button
+            AnimatedVisibility(
+                visible = showScrollToBottom,
+                enter = fadeIn(animationSpec = tween(200)),
+                exit = fadeOut(animationSpec = tween(200)),
+                modifier = Modifier.align(Alignment.BottomEnd)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(end = 16.dp, bottom = 8.dp)
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .clickable {
+                            scope.launch {
+                                listState.animateScrollToItem(messages.size - 1)
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Scroll to bottom",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }
@@ -283,12 +345,54 @@ fun ChatScreen(
             )
         }
 
-        // Input area — imePadding() moves it up when keyboard is shown
+        // Reference/quote bar — shows above input when user follows up on a message
+        AnimatedVisibility(
+            visible = uiState.referencedContent != null,
+            enter = fadeIn(animationSpec = tween(200)),
+            exit = fadeOut(animationSpec = tween(200))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 2.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.QuestionAnswer,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = uiState.referencedContent ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = { viewModel.clearReferencedContent() },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Remove reference",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+
+        // Input area
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .imePadding()
-                .navigationBarsPadding()
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Row(
@@ -366,8 +470,7 @@ fun ChatScreen(
                         )
                     },
                     modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp),
+                        .weight(1f),
                     shape = RoundedCornerShape(20.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
@@ -376,14 +479,8 @@ fun ChatScreen(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                     ),
                     textStyle = MaterialTheme.typography.bodyLarge,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                    keyboardActions = KeyboardActions(
-                        onSend = {
-                            viewModel.sendMessage()
-                            focusManager.clearFocus()
-                        }
-                    ),
-                    singleLine = true
+                    minLines = 1,
+                    maxLines = 6
                 )
 
                 Spacer(modifier = Modifier.width(8.dp))

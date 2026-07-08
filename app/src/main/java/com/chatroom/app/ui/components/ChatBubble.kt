@@ -29,11 +29,16 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -70,6 +75,9 @@ fun ChatBubble(
     isLastMessage: Boolean = false,
     onRegenerate: (() -> Unit)? = null,
     onFollowUp: ((String) -> Unit)? = null,
+    onRecall: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
+    onRewrite: (() -> Unit)? = null,
     searchSources: List<String> = emptyList(),
     modifier: Modifier = Modifier
 ) {
@@ -154,17 +162,52 @@ fun ChatBubble(
             }
         }
 
-        // Action buttons for AI messages
-        if (!isUser) {
-            AnimatedVisibility(
-                visible = true,
-                enter = fadeIn() + slideInVertically { it / 2 }
+        // Action buttons
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn() + slideInVertically { it / 2 }
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(start = 4.dp, top = 2.dp),
+                horizontalArrangement = Arrangement.Start
             ) {
-                Row(
-                    modifier = Modifier
-                        .padding(start = 4.dp, top = 2.dp),
-                    horizontalArrangement = Arrangement.Start
-                ) {
+                if (isUser) {
+                    // --- User message actions ---
+                    // Copy button
+                    val copiedText = stringResource(R.string.copied_toast)
+                    IconButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("message", message.content))
+                            Toast.makeText(context, copiedText, Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = stringResource(R.string.copy),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    // Recall button (only on last user message)
+                    if (isLastMessage && onRecall != null) {
+                        IconButton(
+                            onClick = onRecall,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Undo,
+                                contentDescription = stringResource(R.string.recall),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                } else {
+                    // --- AI message actions ---
                     // Copy button
                     val copiedText = stringResource(R.string.copied_toast)
                     IconButton(
@@ -198,15 +241,30 @@ fun ChatBubble(
                         }
                     }
 
-                    // Regenerate button (only on last AI message)
-                    if (isLastMessage && onRegenerate != null) {
+                    // Rewrite button (on any AI message, not just the last)
+                    if (onRewrite != null) {
                         IconButton(
-                            onClick = onRegenerate,
+                            onClick = onRewrite,
                             modifier = Modifier.size(28.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = stringResource(R.string.regenerate),
+                                contentDescription = stringResource(R.string.rewrite),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    // Delete button (on any AI message)
+                    if (onDelete != null) {
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.delete_message),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                 modifier = Modifier.size(16.dp)
                             )
@@ -236,9 +294,11 @@ private fun ReasoningSection(reasoning: String) {
                 .padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "\uD83E\uDDD0",
-                style = MaterialTheme.typography.labelSmall
+            Icon(
+                imageVector = Icons.Default.Psychology,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
@@ -248,10 +308,11 @@ private fun ReasoningSection(reasoning: String) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = if (expanded) "\u25BC" else "\u25B6",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            Icon(
+                imageVector = if (expanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(16.dp)
             )
         }
 
@@ -296,9 +357,11 @@ private fun SearchSourcesSection(sources: List<String>) {
                 .padding(horizontal = 10.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "\uD83D\uDD0D",
-                style = MaterialTheme.typography.labelSmall
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(14.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
@@ -308,10 +371,11 @@ private fun SearchSourcesSection(sources: List<String>) {
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = if (expanded) "\u25BC" else "\u25B6",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+            Icon(
+                imageVector = if (expanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                modifier = Modifier.size(16.dp)
             )
         }
 

@@ -15,10 +15,12 @@ import com.chatroom.app.ui.screens.ChatScreen
 import com.chatroom.app.ui.screens.IdentityScreen
 import com.chatroom.app.ui.screens.SessionManagerScreen
 import com.chatroom.app.ui.screens.SettingsScreen
+import com.chatroom.app.ui.screens.UserProfileScreen
 import com.chatroom.app.viewmodel.ApiAccountViewModel
 import com.chatroom.app.viewmodel.ChatViewModel
 import com.chatroom.app.viewmodel.IdentityViewModel
 import com.chatroom.app.viewmodel.SettingsViewModel
+import com.chatroom.app.viewmodel.UserProfileViewModel
 
 @Composable
 fun AppNavigation(
@@ -27,6 +29,7 @@ fun AppNavigation(
     settingsViewModel: SettingsViewModel,
     apiAccountViewModel: ApiAccountViewModel,
     identityViewModel: IdentityViewModel,
+    userProfileViewModel: UserProfileViewModel,
     onToggleSidebar: () -> Unit,
     onCloseSidebar: () -> Unit = onToggleSidebar,
     modifier: Modifier = Modifier
@@ -64,6 +67,10 @@ fun AppNavigation(
                 viewModel = chatViewModel,
                 onToggleSidebar = onToggleSidebar,
                 onSessionSelected = onCloseSidebar
+            )
+            SidebarDestination.Profile -> UserProfileScreen(
+                viewModel = userProfileViewModel,
+                onToggleSidebar = onToggleSidebar
             )
         }
     }

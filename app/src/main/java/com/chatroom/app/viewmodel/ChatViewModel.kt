@@ -14,6 +14,7 @@ import com.chatroom.app.data.model.Session
 import com.chatroom.app.data.repository.ApiAccountRepository
 import com.chatroom.app.data.repository.IdentityRepository
 import com.chatroom.app.data.repository.SessionRepository
+import com.chatroom.app.data.repository.UserProfileRepository
 import com.chatroom.app.util.AppLogger
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -37,7 +38,8 @@ data class ChatUiState(
     val showChatSettings: Boolean = false,
     val editableSystemPrompt: String = "",
     val selectedSessionIds: Set<String> = emptySet(),
-    val shareAccountInfo: Boolean = false
+    val shareAccountInfo: Boolean = false,
+    val referencedContent: String? = null
 )
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
@@ -45,6 +47,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val sessionRepo = SessionRepository(application)
     private val apiAccountRepo = ApiAccountRepository(application)
     private val identityRepo = IdentityRepository(application)
+    private val userProfileRepo = UserProfileRepository(application)
     private val webSearchService = WebSearchService.createDefault()
     private var timerJob: Job? = null
 
@@ -117,7 +120,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         sendJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 inputText = "", isSending = true, error = null,
-                thinkingElapsed = 0, searchSources = emptyList()
+                thinkingElapsed = 0, searchSources = emptyList(),
+                referencedContent = null
             )
 
             // Start elapsed time counter
@@ -225,7 +229,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     val aiMessage = response.body()?.choices?.firstOrNull()?.message
                         ?: ChatMessage(role = "assistant", content = "No response generated.")
 
-                    sessionRepo.addMessageToSession(session.id, aiMessage)
+                    // Strip reasoning content if deep thinking is not enabled
+                    val finalMessage = if (!session.deepThinkingEnabled) {
+                        aiMessage.copy(reasoningContent = null)
+                    } else {
+                        aiMessage
+                    }
+
+                    sessionRepo.addMessageToSession(session.id, finalMessage)
 
                     // Update session title from first exchange
                     if (hadNoMessages) {
@@ -308,12 +319,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     val aiMessage = response.body()?.choices?.firstOrNull()?.message
                         ?: ChatMessage(role = "assistant", content = "No response generated.")
 
+                    // Strip reasoning content if deep thinking is not enabled
+                    val finalMessage = if (!session.deepThinkingEnabled) {
+                        aiMessage.copy(reasoningContent = null)
+                    } else {
+                        aiMessage
+                    }
+
                     // Remove last AI response and add new one
                     val lastAiIdx = session.messages.indexOfLast { it.role == "assistant" }
                     if (lastAiIdx >= 0) {
                         sessionRepo.removeMessageAtIndex(session.id, lastAiIdx)
                     }
-                    sessionRepo.addMessageToSession(session.id, aiMessage)
+                    sessionRepo.addMessageToSession(session.id, finalMessage)
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "Unknown error"
                     AppLogger.e("ChatVM", "API error: ${response.code()} - $errorBody")
@@ -380,6 +398,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.value = _uiState.value.copy(error = null)
     }
 
+    fun setReferencedContent(content: String) {
+        _uiState.value = _uiState.value.copy(referencedContent = content)
+    }
+
+    fun clearReferencedContent() {
+        _uiState.value = _uiState.value.copy(referencedContent = null)
+    }
+
     fun stopSending() {
         sendJob?.cancel()
         sendJob = null
@@ -388,12 +414,161 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Build context injection messages from selected sessions and account info.
+     * Recall the last user message: remove it (and its AI response) from the session,
+     * and put the text back into the input box.
+     */
+    fun recallLastMessage() {
+        viewModelScope.launch {
+            val session = activeSession.value ?: return@launch
+            val msgs = session.messages
+            if (msgs.isEmpty()) return@launch
+
+            val lastUserIdx = msgs.indexOfLast { it.role == "user" }
+            if (lastUserIdx < 0) return@launch
+
+            val recalledText = msgs[lastUserIdx].content
+
+            // Remove messages from lastUserIdx to end (user msg + any following AI responses)
+            val removeIndices = (lastUserIdx until msgs.size).toList().reversed()
+            for (idx in removeIndices) {
+                sessionRepo.removeMessageAtIndex(session.id, idx)
+            }
+
+            // Put the text back into the input box
+            _uiState.value = _uiState.value.copy(inputText = recalledText)
+            clearReferencedContent()
+        }
+    }
+
+    /**
+     * Delete a specific AI message from the session by its ID.
+     */
+    fun deleteMessage(messageId: String) {
+        viewModelScope.launch {
+            val session = activeSession.value ?: return@launch
+            val idx = session.messages.indexOfFirst { it.id == messageId }
+            if (idx >= 0) {
+                sessionRepo.removeMessageAtIndex(session.id, idx)
+            }
+        }
+    }
+
+    /**
+     * Rewrite an AI message: remove it and all messages after it,
+     * then regenerate a new AI response from the conversation up to that point.
+     */
+    fun rewriteMessage(messageId: String) {
+        val session = activeSession.value ?: return
+        val apiAccount = activeApiAccount.value ?: return
+        val msgs = session.messages
+        val aiIdx = msgs.indexOfFirst { it.id == messageId }
+        if (aiIdx < 0) return
+
+        // Find the user message that preceded this AI message
+        val precedingUserIdx = msgs.subList(0, aiIdx).indexOfLast { it.role == "user" }
+        if (precedingUserIdx < 0) return
+        val userMsg = msgs[precedingUserIdx]
+
+        sendJob?.cancel()
+        sendJob = viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isSending = true, error = null,
+                thinkingElapsed = 0, searchSources = emptyList()
+            )
+            startTimer()
+
+            // Remove this AI message and everything after it
+            val removeIndices = (aiIdx until msgs.size).toList().reversed()
+            for (idx in removeIndices) {
+                sessionRepo.removeMessageAtIndex(session.id, idx)
+            }
+            // Re-fetch session to get updated messages
+            val updatedSession = activeSession.first() ?: return@launch
+
+            // Build message list up to (and including) the user message
+            val msgList = mutableListOf(
+                ChatMessage(role = "system", content = updatedSession.systemPrompt)
+            )
+            val upToUserIdx = updatedSession.messages.indexOfFirst { it.id == userMsg.id }
+            if (upToUserIdx > 0) {
+                msgList.addAll(updatedSession.messages.subList(0, upToUserIdx + 1))
+            } else {
+                msgList.add(userMsg)
+            }
+
+            try {
+                val api = ChatApiService.create(apiAccount.apiBaseUrl)
+                msgList.addAll(msgList.size - 1, buildContextMessages(updatedSession.id))
+
+                val model = if (updatedSession.deepThinkingEnabled) apiAccount.reasoningModel else apiAccount.model
+                val reasoningEffort = if (updatedSession.deepThinkingEnabled) "high" else null
+
+                AppLogger.d("ChatVM", "Rewrite API call: model=$model")
+                val request = ChatRequest(
+                    model = model,
+                    messages = msgList,
+                    maxTokens = if (updatedSession.deepThinkingEnabled) 8192 else 4096,
+                    reasoningEffort = reasoningEffort
+                )
+                val response = api.chatCompletion(
+                    authorization = "Bearer ${apiAccount.apiKey}",
+                    request = request
+                )
+
+                if (response.isSuccessful) {
+                    val aiMessage = response.body()?.choices?.firstOrNull()?.message
+                        ?: ChatMessage(role = "assistant", content = "No response generated.")
+
+                    val finalMessage = if (!updatedSession.deepThinkingEnabled) {
+                        aiMessage.copy(reasoningContent = null)
+                    } else {
+                        aiMessage
+                    }
+                    sessionRepo.addMessageToSession(updatedSession.id, finalMessage)
+                } else {
+                    val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                    AppLogger.e("ChatVM", "Rewrite API error: ${response.code()} - $errorBody")
+                    _uiState.value = _uiState.value.copy(
+                        error = "API Error: ${response.code()} - $errorBody"
+                    )
+                }
+            } catch (e: Exception) {
+                AppLogger.e("ChatVM", "Rewrite network error", e)
+                _uiState.value = _uiState.value.copy(
+                    error = "Network Error: ${e.message ?: "Connection failed"}"
+                )
+            } finally {
+                stopTimer()
+                _uiState.value = _uiState.value.copy(isSending = false)
+            }
+        }
+    }
+
+    /**
+     * Build context injection messages from user profile, selected sessions and account info.
      * These are injected as system messages before the API call.
      */
     private suspend fun buildContextMessages(excludeSessionId: String): List<ChatMessage> {
         val result = mutableListOf<ChatMessage>()
         val selectedIds = _uiState.value.selectedSessionIds
+
+        // Inject user profile info so the AI knows who it's talking to
+        val profile = userProfileRepo.activeProfile.first()
+        if (profile != null) {
+            result.add(ChatMessage(
+                role = "system",
+                content = "Current user information:\n${profile.toContextString()}"
+            ))
+        }
+
+        // Inject referenced/quote content if the user is replying to a specific message
+        val referenced = _uiState.value.referencedContent
+        if (!referenced.isNullOrBlank()) {
+            result.add(ChatMessage(
+                role = "system",
+                content = "The user is referring to the following message:\n\"$referenced\""
+            ))
+        }
 
         // Inject recent messages from selected sessions
         if (selectedIds.isNotEmpty()) {

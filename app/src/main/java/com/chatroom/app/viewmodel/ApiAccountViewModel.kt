@@ -25,14 +25,31 @@ class ApiAccountViewModel(application: Application) : AndroidViewModel(applicati
     private val _showForm = MutableStateFlow(false)
     val showForm: StateFlow<Boolean> = _showForm.asStateFlow()
 
+    private val _editingAccount = MutableStateFlow<ApiAccount?>(null)
+    val editingAccount: StateFlow<ApiAccount?> = _editingAccount.asStateFlow()
+
     fun toggleForm() {
         _showForm.value = !_showForm.value
+        if (!_showForm.value) _editingAccount.value = null
+    }
+
+    fun startEdit(account: ApiAccount) {
+        _editingAccount.value = account
+        _showForm.value = true
     }
 
     fun addAccount(account: ApiAccount) {
         viewModelScope.launch {
             repository.addAccount(account)
             _showForm.value = false
+        }
+    }
+
+    fun updateAccount(account: ApiAccount) {
+        viewModelScope.launch {
+            repository.updateAccount(account)
+            _showForm.value = false
+            _editingAccount.value = null
         }
     }
 

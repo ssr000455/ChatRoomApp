@@ -4,6 +4,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +47,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,8 +58,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.chatroom.app.R
+import com.chatroom.app.data.repository.BackupManager
 import com.chatroom.app.ui.theme.ThemeMode
 import com.chatroom.app.viewmodel.SettingsViewModel
+import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Upload
 
 @Composable
 fun SettingsScreen(
@@ -187,6 +197,104 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 modifier = Modifier.padding(start = 4.dp, top = 4.dp)
             )
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Divider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Backup & Restore section
+            val scope = rememberCoroutineScope()
+            val backupManager = remember { BackupManager(context) }
+            var backupStatus by remember { mutableStateOf<String?>(null) }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Storage,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.backup_title),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.backup_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 8.dp)
+            )
+
+            backupStatus?.let { status ->
+                Text(
+                    text = status,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                )
+            }
+
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            backupStatus = stringResource(R.string.exporting)
+                            val result = backupManager.exportBackup()
+                            result.onSuccess { msg ->
+                                backupStatus = msg
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            }.onFailure { e ->
+                                backupStatus = stringResource(R.string.backup_failed) + ": ${e.message}"
+                                Toast.makeText(context, stringResource(R.string.backup_failed), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 4.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Upload,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.export_backup))
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            backupStatus = stringResource(R.string.importing)
+                            val result = backupManager.importBackup()
+                            result.onSuccess { msg ->
+                                backupStatus = msg
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            }.onFailure { e ->
+                                backupStatus = stringResource(R.string.import_failed) + ": ${e.message}"
+                                Toast.makeText(context, stringResource(R.string.import_failed), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 4.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.import_backup))
+                }
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
             Divider(color = MaterialTheme.colorScheme.outlineVariant)
