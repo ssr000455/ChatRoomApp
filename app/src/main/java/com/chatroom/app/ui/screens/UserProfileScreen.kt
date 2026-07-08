@@ -372,7 +372,8 @@ private fun ProfileForm(
                         modifier = Modifier
                             .matchParentSize()
                             .clip(CircleShape)
-                            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.3f)),
+                            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.3f))
+                            .clickable { imagePickerLauncher.launch("image/*") },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -528,7 +529,7 @@ private fun compressAndEncodeImage(context: Context, uri: Uri): String? {
         scaled.compress(Bitmap.CompressFormat.JPEG, 70, baos)
         val bytes = baos.toByteArray()
         android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT)
-    } catch (e: Exception) {
+    } catch (e: Throwable) {
         null
     }
 }
