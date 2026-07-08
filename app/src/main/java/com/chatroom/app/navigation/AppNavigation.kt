@@ -125,7 +125,13 @@ private fun MainContentRouter(
         if (terminalSession != null) {
             TerminalScreen(
                 terminalSession = terminalSession,
-                onToggleSidebar = onToggleSidebar
+                onToggleSidebar = onToggleSidebar,
+                onExit = {
+                    val s = activeSession
+                    if (s != null) {
+                        chatViewModel.setSessionMode(s.id, SessionMode.CHAT)
+                    }
+                }
             )
         } else {
             // Fallback to chat if terminal session not initialized

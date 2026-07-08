@@ -6,6 +6,12 @@ enum class SessionType { CHAT, CODING_ASSISTANT }
 
 enum class SessionMode { CHAT, TERMINAL, REPO_HOME }
 
+enum class AiAccessLevel {
+    READ_ONLY,
+    READ_WRITE,
+    FULL_ACCESS
+}
+
 data class Session(
     val id: String = UUID.randomUUID().toString(),
     val title: String = "New Chat",
@@ -26,7 +32,10 @@ data class Session(
     val repoBranch: String = "main",
     val localPath: String = "",
     val repoToken: String = "",
-    val pendingChanges: List<FileChange> = emptyList()
+    val pendingChanges: List<FileChange> = emptyList(),
+    // Access control & display
+    val aiAccessLevel: AiAccessLevel = AiAccessLevel.READ_WRITE,
+    val showAiChanges: Boolean = true
 ) {
     val totalTokens: Int
         get() = messages.sumOf { it.content.length / 2 }
@@ -36,4 +45,13 @@ data class Session(
 
     val repoDisplayName: String
         get() = if (repoOwner.isNotBlank() && repoName.isNotBlank()) "$repoOwner/$repoName" else title
+
+    /**
+     * Sanitize after Gson deserialization: null lists -> empty lists.
+     * Gson bypasses constructor defaults when deserializing old data.
+     */
+    fun sanitize(): Session = copy(
+        messages = (messages ?: emptyList()).map { it.sanitize() },
+        pendingChanges = pendingChanges ?: emptyList()
+    )
 }

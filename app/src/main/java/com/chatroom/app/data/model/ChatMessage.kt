@@ -9,8 +9,20 @@ data class ChatMessage(
     val content: String,
     val attachments: List<Attachment> = emptyList(),
     @SerializedName("reasoning_content")
-    val reasoningContent: String? = null
-)
+    val reasoningContent: String? = null,
+    // Coding assistant display fields
+    val terminalCommands: List<TerminalCommand> = emptyList(),
+    val fileChanges: List<FileChangeSummary> = emptyList()
+) {
+    /**
+     * Sanitize after Gson deserialization: null lists -> empty lists.
+     */
+    fun sanitize(): ChatMessage = copy(
+        attachments = attachments ?: emptyList(),
+        terminalCommands = terminalCommands ?: emptyList(),
+        fileChanges = fileChanges ?: emptyList()
+    )
+}
 
 data class Attachment(
     val name: String,
@@ -56,4 +68,19 @@ data class WebSearchResult(
     val title: String,
     val url: String,
     val snippet: String
+)
+
+// Terminal command output embedded in chat
+data class TerminalCommand(
+    val command: String,
+    val output: String,
+    val exitCode: Int,
+    val workingDirectory: String = ""
+)
+
+// Summary of file changes by AI
+data class FileChangeSummary(
+    val filePath: String,
+    val additions: Int = 0,
+    val deletions: Int = 0
 )

@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -36,7 +38,10 @@ import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,11 +60,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.chatroom.app.R
 import com.chatroom.app.data.model.ChatMessage
+import com.chatroom.app.data.model.FileChangeSummary
+import com.chatroom.app.data.model.TerminalCommand
 import com.chatroom.app.ui.theme.AiBubbleDark
 import com.chatroom.app.ui.theme.AiBubbleLight
 import com.chatroom.app.ui.theme.AiTextDark
@@ -78,6 +86,7 @@ fun ChatBubble(
     onRecall: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
     onRewrite: (() -> Unit)? = null,
+    onTranslate: ((String, String) -> Unit)? = null,
     searchSources: List<String> = emptyList(),
     modifier: Modifier = Modifier
 ) {
@@ -152,12 +161,37 @@ fun ChatBubble(
                             .padding(horizontal = 16.dp, vertical = 10.dp)
                     )
                 } else {
+                    // File changes summary (shown before content)
+                    if (!message.fileChanges.isNullOrEmpty()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 6.dp)
+                        ) {
+                            FileChangesSummary(message.fileChanges.orEmpty())
+                        }
+                    }
+
                     MarkdownContent(
                         content = message.content,
                         modifier = Modifier
                             .widthIn(max = 300.dp)
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     )
+
+                    // Terminal commands (shown after content)
+                    if (!message.terminalCommands.isNullOrEmpty()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            message.terminalCommands.orEmpty().forEach { cmd ->
+                                TerminalCommandBlock(cmd)
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -224,6 +258,50 @@ fun ChatBubble(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                             modifier = Modifier.size(16.dp)
                         )
+                    }
+
+                    // Translate dropdown (Chinese, English, Japanese)
+                    if (onTranslate != null) {
+                        var translateExpanded by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(
+                                onClick = { translateExpanded = true },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Translate,
+                                    contentDescription = stringResource(R.string.translate),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = translateExpanded,
+                                onDismissRequest = { translateExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("简体中文") },
+                                    onClick = {
+                                        translateExpanded = false
+                                        onTranslate(message.content, "Simplified Chinese")
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("繁體中文") },
+                                    onClick = {
+                                        translateExpanded = false
+                                        onTranslate(message.content, "Traditional Chinese")
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("English") },
+                                    onClick = {
+                                        translateExpanded = false
+                                        onTranslate(message.content, "English")
+                                    }
+                                )
+                            }
+                        }
                     }
 
                     // Follow-up button
@@ -471,6 +549,118 @@ fun ThinkingIndicator(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FileChangesSummary(changes: List<FileChangeSummary>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f))
+            .padding(8.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.file_changes),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+        changes.forEach { change ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(vertical = 1.dp)
+            ) {
+                Text(
+                    text = change.filePath,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                if (change.additions > 0) {
+                    Text(
+                        text = "+${change.additions}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = androidx.compose.ui.graphics.Color(0xFF4CAF50),
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+                if (change.deletions > 0) {
+                    Text(
+                        text = "-${change.deletions}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = androidx.compose.ui.graphics.Color(0xFFF44336),
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TerminalCommandBlock(cmd: TerminalCommand) {
+    val termBg = androidx.compose.ui.graphics.Color(0xFF1E1E1E)
+    val termText = androidx.compose.ui.graphics.Color(0xFFD4D4D4)
+    val termPrompt = androidx.compose.ui.graphics.Color(0xFF4EC9B0)
+    val termError = androidx.compose.ui.graphics.Color(0xFFF44747)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(termBg)
+            .padding(8.dp)
+    ) {
+        // Command line with prompt
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "$ ",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace
+                ),
+                color = termPrompt
+            )
+            Text(
+                text = cmd.command,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace
+                ),
+                color = termText
+            )
+        }
+
+        // Output (if any)
+        if (cmd.output.isNotBlank()) {
+            Text(
+                text = cmd.output.trimEnd(),
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace
+                ),
+                color = if (cmd.exitCode != 0) termError else termText,
+                modifier = Modifier
+                    .padding(top = 2.dp)
+                    .horizontalScroll(rememberScrollState())
+            )
+        }
+
+        // Exit code indicator for non-zero
+        if (cmd.exitCode != 0) {
+            Text(
+                text = stringResource(R.string.terminal_exit_code, cmd.exitCode),
+                style = MaterialTheme.typography.labelSmall,
+                color = termError,
+                modifier = Modifier.padding(top = 2.dp)
+            )
         }
     }
 }

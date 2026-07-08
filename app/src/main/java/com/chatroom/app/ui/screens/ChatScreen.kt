@@ -295,6 +295,8 @@ fun ChatScreen(
                                 ({ viewModel.deleteMessage(message.id) }) else null,
                             onRewrite = if (!uiState.isSending && message.role == "assistant")
                                 ({ viewModel.rewriteMessage(message.id) }) else null,
+                            onTranslate = if (!uiState.isSending && message.role == "assistant")
+                                ({ content, lang -> viewModel.translateMessage(content, lang) }) else null,
                             searchSources = if (isLastAi) uiState.searchSources else emptyList()
                         )
                     }
@@ -606,9 +608,160 @@ fun ChatScreen(
                 Divider()
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // ── Coding Assistant Settings ──
+                if (activeSession?.isCodingAssistant == true) {
+                    val session = activeSession!!
+
+                    // AI Access Level
+                    Text(
+                        text = "AI Access Level",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Control what the AI can do",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    AiAccessLevel.entries.forEach { level ->
+                        val label = when (level) {
+                            AiAccessLevel.READ_ONLY -> "Read Only"
+                            AiAccessLevel.READ_WRITE -> "Read + Write"
+                            AiAccessLevel.FULL_ACCESS -> "Full Access (Read + Write + Git)"
+                        }
+                        val desc = when (level) {
+                            AiAccessLevel.READ_ONLY -> "AI can read files and analyze code"
+                            AiAccessLevel.READ_WRITE -> "AI can read and modify code files"
+                            AiAccessLevel.FULL_ACCESS -> "AI can read, write, and commit code"
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.updateAiAccessLevel(level) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = session.aiAccessLevel == level,
+                                onClick = { viewModel.updateAiAccessLevel(level) }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = desc,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Divider()
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Connection Status
+                    Text(
+                        text = "Connection Status",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    if (session.repoUrl.isNotBlank()) {
+                        Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                            Text(
+                                text = "Repo: ",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = session.repoDisplayName,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                            Text(
+                                text = "Branch: ",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = session.repoBranch,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                            Text(
+                                text = "Status: ",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = if (session.repoToken.isNotBlank()) "Connected" else "Not authenticated",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                color = if (session.repoToken.isNotBlank())
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.error
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "No repository connected",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Divider()
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Show AI Changes toggle
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.updateShowAiChanges(!session.showAiChanges) },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Show AI Changes in Chat",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Display terminal commands and file changes inline",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = session.showAiChanges,
+                            onCheckedChange = { viewModel.updateShowAiChanges(it) }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Divider()
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
                 // ── Review Changes (coding assistant only) ──
                 if (activeSession?.isCodingAssistant == true &&
-                    activeSession!!.pendingChanges.isNotEmpty()) {
+                    !activeSession!!.pendingChanges.isNullOrEmpty()) {
+                    val changeCount = activeSession!!.pendingChanges.orEmpty().size
                     Button(
                         onClick = {
                             viewModel.toggleChatSettings()
@@ -619,7 +772,7 @@ fun ChatScreen(
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.view_changes) + " (${activeSession!!.pendingChanges.size})")
+                        Text(stringResource(R.string.view_changes) + " ($changeCount)")
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Divider()

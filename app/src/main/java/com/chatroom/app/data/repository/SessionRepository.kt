@@ -32,7 +32,7 @@ class SessionRepository(private val context: Context) {
     val sessions: Flow<List<Session>> = context.sessionDataStore.data.map { prefs ->
         val json = prefs[SESSIONS_KEY] ?: "[]"
         val type = object : TypeToken<List<Session>>() {}.type
-        gson.fromJson<List<Session>>(json, type).also { cachedSessions = it }
+        gson.fromJson<List<Session>>(json, type).map { it.sanitize() }.also { cachedSessions = it }
     }
 
     val activeSessionId: Flow<String?> = context.sessionDataStore.data.map { prefs ->
@@ -42,7 +42,7 @@ class SessionRepository(private val context: Context) {
     val activeSession: Flow<Session?> = context.sessionDataStore.data.map { prefs ->
         val sessionId = prefs[ACTIVE_SESSION_ID_KEY] ?: return@map null
         val list = getCachedSessions(prefs[SESSIONS_KEY])
-        list.find { it.id == sessionId }
+        list.find { it.id == sessionId }?.sanitize()
     }
 
     @Synchronized
@@ -50,7 +50,7 @@ class SessionRepository(private val context: Context) {
         if (cachedSessions != null) return cachedSessions!!
         val raw = json ?: return emptyList()
         val type = object : TypeToken<List<Session>>() {}.type
-        return gson.fromJson<List<Session>>(raw, type).also { cachedSessions = it }
+        return gson.fromJson<List<Session>>(raw, type).map { it.sanitize() }.also { cachedSessions = it }
     }
 
     suspend fun createSession(session: Session): Result<Unit> = runCatching {

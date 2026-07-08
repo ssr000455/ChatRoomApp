@@ -152,7 +152,7 @@
     <string name="coding_assistant_setup_title">Create Coding Assistant</string>
     <string name="wizard_step_api">Step 1: Select API Account</string>
     <string name="wizard_step_prompt">Step 2: System Prompt (optional)</string>
-    <string name="wizard_step_repo">Step 3: Connect Repository (optional)</string>
+    <string name="wizard_step_repo">Step 3: Connect Repository</string>
     <string name="wizard_select_api">Select an API account to use</string>
     <string name="wizard_no_api">No API accounts configured. Add one in Settings first.</string>
     <string name="wizard_prompt_hint">Set a custom system prompt for this coding assistant…</string>
@@ -198,4 +198,13 @@
     <string name="no_pending_changes">No pending changes</string>
     <string name="changes_applied">Changes applied successfully</string>
     <string name="view_changes">Review Changes</string>
+
+    <!-- Translate -->
+    <string name="translate">Translate</string>
+
+    <!-- File Changes -->
+    <string name="file_changes">File Changes</string>
+
+    <!-- Terminal Commands -->
+    <string name="terminal_exit_code">Exit code: %d</string>
 </resources>

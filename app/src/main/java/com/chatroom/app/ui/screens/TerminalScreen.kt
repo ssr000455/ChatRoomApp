@@ -1,7 +1,9 @@
 package com.chatroom.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,11 +15,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
@@ -34,8 +38,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
@@ -49,6 +60,7 @@ import kotlinx.coroutines.launch
 fun TerminalScreen(
     terminalSession: TerminalSession,
     onToggleSidebar: () -> Unit,
+    onExit: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val history by terminalSession.history.collectAsState()
@@ -62,6 +74,20 @@ fun TerminalScreen(
     LaunchedEffect(history.size) {
         if (history.isNotEmpty()) {
             listState.scrollToItem(history.size)
+        }
+    }
+
+    val executeCommand = {
+        val cmd = inputValue.text.trim()
+        if (cmd.isNotEmpty() && !isRunning) {
+            if (cmd == "exit" || cmd == "quit") {
+                onExit()
+            } else {
+                scope.launch {
+                    terminalSession.executeCommand(cmd)
+                }
+            }
+            inputValue = TextFieldValue("")
         }
     }
 
@@ -116,6 +142,18 @@ fun TerminalScreen(
                     modifier = Modifier.size(18.dp)
                 )
             }
+            // Exit button
+            IconButton(
+                onClick = onExit,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close Terminal",
+                    tint = textColor.copy(alpha = 0.7f),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
 
         // Terminal output
@@ -138,7 +176,7 @@ fun TerminalScreen(
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
                 Text(
-                    text = "Type 'help' for available commands",
+                    text = "Type 'help' for available commands. Press Enter to execute.",
                     style = TextStyle(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
@@ -172,9 +210,16 @@ fun TerminalScreen(
                 Spacer(modifier = Modifier.height(2.dp))
             }
 
-            // Input line
+            // Input line with Enter key handling
             item {
-                Row {
+                Row(
+                    modifier = Modifier.onPreviewKeyEvent { event ->
+                        if (event.key == Key.Enter && event.type == KeyEventType.KeyUp) {
+                            executeCommand()
+                            true
+                        } else false
+                    }
+                ) {
                     Text(
                         text = prompt,
                         style = TextStyle(
@@ -223,7 +268,7 @@ fun TerminalScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(androidx.compose.ui.graphics.Color(0xFF2D2D2D))
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
@@ -237,29 +282,125 @@ fun TerminalScreen(
                         fontSize = 11.sp,
                         color = textColor.copy(alpha = 0.6f)
                     ),
-                    maxLines = 1
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f)
                 )
             }
             IconButton(
-                onClick = {
-                    val cmd = inputValue.text.trim()
-                    if (cmd.isNotEmpty() && !isRunning) {
-                        scope.launch {
-                            terminalSession.executeCommand(cmd)
-                        }
-                        inputValue = TextFieldValue("")
-                    }
-                },
+                onClick = { executeCommand() },
                 enabled = inputValue.text.isNotBlank() && !isRunning,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(28.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Execute",
                     tint = if (inputValue.text.isNotBlank() && !isRunning)
                         promptColor else textColor.copy(alpha = 0.3f),
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
+            }
+        }
+
+        // Virtual key row (for mobile without hardware keyboard)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(androidx.compose.ui.graphics.Color(0xFF252526))
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val keyColor = textColor.copy(alpha = 0.7f)
+            val keyBg = androidx.compose.ui.graphics.Color(0xFF3C3C3C)
+            val keyShape = RoundedCornerShape(4.dp)
+
+            listOf("Esc", "Ctrl", "Alt", "Tab").forEach { key ->
+                Box(
+                    modifier = Modifier
+                        .clip(keyShape)
+                        .background(keyBg)
+                        .clickable {
+                            when (key) {
+                                "Esc" -> inputValue = TextFieldValue(inputValue.text + "\u001B")
+                                "Ctrl" -> {} // Modifier
+                                "Alt" -> {} // Modifier
+                                "Tab" -> inputValue = TextFieldValue(inputValue.text + "\t")
+                            }
+                        }
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = key,
+                        style = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            color = keyColor
+                        )
+                    )
+                }
+            }
+
+            Box(modifier = Modifier.width(2.dp))
+
+            listOf("\u2190", "\u2191", "\u2193", "\u2192").forEachIndexed { i, arrow ->
+                Box(
+                    modifier = Modifier
+                        .clip(keyShape)
+                        .background(keyBg)
+                        .clickable {
+                            val idx = inputValue.selection.start
+                            val newPos = when (arrow) {
+                                "\u2190" -> (idx - 1).coerceAtLeast(0)
+                                "\u2191" -> 0
+                                "\u2193" -> inputValue.text.length
+                                "\u2192" -> (idx + 1).coerceAtMost(inputValue.text.length)
+                                else -> idx
+                            }
+                            inputValue = inputValue.copy(
+                                selection = androidx.compose.ui.text.TextRange(newPos)
+                            )
+                        }
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = arrow,
+                        style = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                            color = keyColor
+                        )
+                    )
+                }
+            }
+
+            Box(modifier = Modifier.width(2.dp))
+
+            listOf("End", "Home").forEach { key ->
+                Box(
+                    modifier = Modifier
+                        .clip(keyShape)
+                        .background(keyBg)
+                        .clickable {
+                            inputValue = inputValue.copy(
+                                selection = androidx.compose.ui.text.TextRange(
+                                    if (key == "Home") 0 else inputValue.text.length
+                                )
+                            )
+                        }
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = key,
+                        style = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            color = keyColor
+                        )
+                    )
+                }
             }
         }
     }

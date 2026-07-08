@@ -79,7 +79,7 @@ fun CodingAssistantWizardScreen(
     var repoName by remember { mutableStateOf("") }
 
     val canProceedStep1 = selectedApiAccountId != null
-    val canProceedStep3 = repoUrl.isBlank() || repoConnected
+    val canProceedStep3 = repoConnected
 
     Column(
         modifier = modifier
@@ -190,7 +190,7 @@ fun CodingAssistantWizardScreen(
                         currentStep = WizardStep.entries[currentStep.ordinal - 1]
                     }
                 ) {
-                    Text(stringResource(R.string.wizard_skip).let { "Back" })
+                    Text("Back")
                 }
             } else {
                 Spacer(modifier = Modifier.size(1.dp))
@@ -219,15 +219,29 @@ fun CodingAssistantWizardScreen(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(stringResource(R.string.wizard_create))
                 }
+            } else if (currentStep == WizardStep.SYSTEM_PROMPT) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            currentStep = WizardStep.entries[currentStep.ordinal + 1]
+                        }
+                    ) {
+                        Text(stringResource(R.string.wizard_skip))
+                    }
+                    Button(
+                        onClick = {
+                            currentStep = WizardStep.entries[currentStep.ordinal + 1]
+                        }
+                    ) {
+                        Text(stringResource(R.string.wizard_next))
+                    }
+                }
             } else {
                 Button(
                     onClick = {
                         currentStep = WizardStep.entries[currentStep.ordinal + 1]
                     },
-                    enabled = when (currentStep) {
-                        WizardStep.SELECT_API -> canProceedStep1
-                        else -> true
-                    }
+                    enabled = canProceedStep1
                 ) {
                     Text(stringResource(R.string.wizard_next))
                 }
@@ -449,11 +463,66 @@ private fun ConnectRepoStep(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Connect a git repository to let the assistant read and modify code. This step is optional.",
+            text = "Connect a git repository. The assistant needs repository access to read and modify code.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(16.dp))
+
+        // Git hosting quick-select
+        Text(
+            text = "Quick select",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val hosts = listOf(
+                "GitHub" to "https://github.com/",
+                "Gitee" to "https://gitee.com/",
+                "GitLab" to "https://gitlab.com/",
+                "Bitbucket" to "https://bitbucket.org/"
+            )
+            hosts.forEach { (name, baseUrl) ->
+                val isSelected = repoUrl.startsWith(baseUrl) && !repoConnected
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                        .clickable(enabled = !repoConnected) {
+                            onRepoUrlChange(baseUrl)
+                            if (repoConnected) onDisconnect()
+                        }
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = name,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Or enter a custom URL manually",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
 
         OutlinedTextField(
             value = repoUrl,
@@ -544,37 +613,6 @@ private fun ConnectRepoStep(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.wizard_connect_repo))
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Code,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = stringResource(R.string.wizard_repo_skipped),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
             }
         }
     }

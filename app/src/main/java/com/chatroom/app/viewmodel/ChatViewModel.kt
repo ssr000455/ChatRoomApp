@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.chatroom.app.data.api.ChatApiService
 import com.chatroom.app.data.api.WebSearchService
 import com.chatroom.app.data.api.searchWithSources
+import com.chatroom.app.data.model.AiAccessLevel
 import com.chatroom.app.data.model.ApiAccount
 import com.chatroom.app.data.model.ChangeStatus
 import com.chatroom.app.data.model.ChatMessage
@@ -213,6 +214,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 it.status != ChangeStatus.ACCEPTED
             }
             sessionRepo.updateSession(session.copy(pendingChanges = remaining))
+        }
+    }
+
+    // ── Coding Assistant Settings ──
+
+    fun updateAiAccessLevel(level: AiAccessLevel) {
+        viewModelScope.launch {
+            val session = sessionRepo.activeSession.first() ?: return@launch
+            sessionRepo.updateSession(session.copy(aiAccessLevel = level))
+        }
+    }
+
+    fun updateShowAiChanges(show: Boolean) {
+        viewModelScope.launch {
+            val session = sessionRepo.activeSession.first() ?: return@launch
+            sessionRepo.updateSession(session.copy(showAiChanges = show))
         }
     }
 
@@ -723,6 +740,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.value = _uiState.value.copy(thinkingElapsed = elapsed)
             }
         }
+    }
+
+    fun translateMessage(content: String, targetLang: String = "Chinese") {
+        if (_uiState.value.isSending) return
+        _uiState.value = _uiState.value.copy(
+            inputText = "Translate the following text to $targetLang:\n\n$content"
+        )
+        sendMessage()
     }
 
     private fun stopTimer() {
