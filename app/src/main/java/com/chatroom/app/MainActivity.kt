@@ -110,6 +110,7 @@ private fun ChatRoomAppContent(
     // Repo login overlay state
     var showRepoLogin by remember { mutableStateOf(false) }
     var repoLoginUrl by remember { mutableStateOf("") }
+    var repoAuthToken by remember { mutableStateOf<String?>(null) }
 
     // Auto-create terminal sessions for coding assistant sessions
     LaunchedEffect(sessions) {
@@ -157,16 +158,14 @@ private fun ChatRoomAppContent(
                 userProfileViewModel = userProfileViewModel,
                 terminalSessions = terminalSessions,
                 onToggleSidebar = { isSidebarOpen = !isSidebarOpen },
-                onSetupNavigate = { url ->
-                    repoLoginUrl = url
-                    showRepoLogin = true
-                },
                 onCloseSidebar = { isSidebarOpen = false }
             )
         } else {
             // Show wizard directly (outside AnimatedContent to avoid conflicts)
             CodingAssistantScreen(
                 chatViewModel = chatViewModel,
+                repoAuthToken = repoAuthToken,
+                onRepoAuthConsumed = { repoAuthToken = null },
                 onOpenRepoLogin = { url ->
                     repoLoginUrl = url
                     showRepoLogin = true
@@ -210,7 +209,8 @@ private fun ChatRoomAppContent(
             RepoLoginScreen(
                 repoUrl = repoLoginUrl,
                 onLoginSuccess = { token ->
-                    Toast.makeText(context, "Repository connected successfully", Toast.LENGTH_SHORT).show()
+                    repoAuthToken = token
+                    Toast.makeText(context, "仓库授权成功", Toast.LENGTH_SHORT).show()
                     showRepoLogin = false
                 },
                 onBack = { showRepoLogin = false }
@@ -222,6 +222,8 @@ private fun ChatRoomAppContent(
 @Composable
 private fun CodingAssistantScreen(
     chatViewModel: ChatViewModel,
+    repoAuthToken: String?,
+    onRepoAuthConsumed: () -> Unit,
     onOpenRepoLogin: (String) -> Unit,
     onBack: () -> Unit
 ) {
@@ -232,6 +234,8 @@ private fun CodingAssistantScreen(
     com.chatroom.app.ui.screens.CodingAssistantWizardScreen(
         apiAccounts = apiAccounts,
         currentCodingAssistantCount = codingAssistantCount,
+        repoAuthToken = repoAuthToken,
+        onRepoAuthConsumed = onRepoAuthConsumed,
         onCreate = { apiAccountId, systemPrompt, repoUrl, repoOwner, repoName ->
             chatViewModel.createCodingAssistantSession(
                 apiAccountId, systemPrompt, repoUrl, repoOwner, repoName

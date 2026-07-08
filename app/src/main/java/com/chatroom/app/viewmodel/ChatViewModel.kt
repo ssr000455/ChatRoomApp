@@ -742,11 +742,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun translateMessage(content: String, targetLang: String = "Chinese") {
+    fun translateMessage(content: String, targetLang: String = "简体中文") {
         if (_uiState.value.isSending) return
-        _uiState.value = _uiState.value.copy(
-            inputText = "Translate the following text to $targetLang:\n\n$content"
-        )
+        val prompt = when (targetLang) {
+            "Simplified Chinese" -> "请将以下内容翻译成简体中文（只输出翻译结果，不要解释）：\n\n$content"
+            "Traditional Chinese" -> "請將以下內容翻譯成繁體中文（只輸出翻譯結果，不要解釋）：\n\n$content"
+            "English" -> "Translate the following text to English (output only the translation, no explanation):\n\n$content"
+            else -> "请将以下内容翻译成$targetLang（只输出翻译结果，不要解释）：\n\n$content"
+        }
+        _uiState.value = _uiState.value.copy(inputText = prompt)
         sendMessage()
     }
 

@@ -196,7 +196,7 @@ fun RepoLoginScreen(
                 modifier = Modifier.align(Alignment.CenterVertically)
             )
             IconButton(
-                onClick = { /* Will implement refresh via ref */ },
+                onClick = { onLoginSuccess("authorized") },
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)

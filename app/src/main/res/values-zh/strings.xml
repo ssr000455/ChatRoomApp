@@ -144,4 +144,67 @@
     <string name="cancel">取消</string>
     <string name="confirm">确定</string>
     <string name="messages_label">条消息</string>
+
+    <!-- Coding Assistant -->
+    <string name="coding_assistant">编程助手</string>
+    <string name="add_coding_assistant">添加编程助手</string>
+    <string name="coding_assistant_limit">最多 3 个编程助手</string>
+    <string name="coding_assistant_setup_title">创建编程助手</string>
+    <string name="wizard_step_api">步骤 1：选择 API 账户</string>
+    <string name="wizard_step_prompt">步骤 2：系统提示词（可选）</string>
+    <string name="wizard_step_repo">步骤 3：连接仓库</string>
+    <string name="wizard_select_api">选择一个 API 账户</string>
+    <string name="wizard_no_api">暂无 API 账户。请在设置中添加。</string>
+    <string name="wizard_prompt_hint">为此编程助手设置自定义系统提示词…</string>
+    <string name="wizard_skip">跳过</string>
+    <string name="wizard_next">下一步</string>
+    <string name="wizard_create">创建</string>
+    <string name="wizard_repo_url_hint">https://github.com/owner/repo</string>
+    <string name="wizard_connect_repo">连接仓库</string>
+    <string name="wizard_connecting">连接中…</string>
+    <string name="wizard_connected">已连接：%s</string>
+    <string name="wizard_login_required">需要登录</string>
+    <string name="wizard_login_desc">你需要登录才能访问此仓库</string>
+    <string name="wizard_repo_skipped">未连接仓库。助手将没有项目上下文。</string>
+
+    <!-- Terminal -->
+    <string name="terminal_title">终端</string>
+    <string name="terminal_input_hint">$ 输入命令…</string>
+    <string name="terminal_clear">清屏</string>
+    <string name="terminal_new">新建会话</string>
+    <string name="terminal_copy">复制输出</string>
+
+    <!-- Repo Browser -->
+    <string name="repo_browser_title">仓库</string>
+    <string name="repo_url_hint">输入仓库 URL…</string>
+    <string name="repo_go">前往</string>
+    <string name="repo_refresh">刷新</string>
+    <string name="repo_loading">加载仓库中…</string>
+
+    <!-- Sub-mode labels -->
+    <string name="mode_chat">AI 对话</string>
+    <string name="mode_terminal">终端</string>
+    <string name="mode_repo">仓库</string>
+
+    <!-- Change Review -->
+    <string name="change_review_title">待处理更改</string>
+    <string name="change_count">%d 个更改</string>
+    <string name="accept_all">全部接受</string>
+    <string name="reject_all">全部拒绝</string>
+    <string name="accept">接受</string>
+    <string name="reject">拒绝</string>
+    <string name="commit_changes">提交更改</string>
+    <string name="commit_message_hint">提交信息…</string>
+    <string name="no_pending_changes">暂无待处理更改</string>
+    <string name="changes_applied">更改已应用成功</string>
+    <string name="view_changes">审查更改</string>
+
+    <!-- Translate -->
+    <string name="translate">翻译</string>
+
+    <!-- File Changes -->
+    <string name="file_changes">文件更改</string>
+
+    <!-- Terminal Commands -->
+    <string name="terminal_exit_code">退出码：%d</string>
 </resources>

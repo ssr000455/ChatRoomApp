@@ -13,12 +13,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.chatroom.app.data.model.Session
 import com.chatroom.app.data.model.SessionMode
-import com.chatroom.app.data.model.SessionType
 import com.chatroom.app.terminal.TerminalSession
 import com.chatroom.app.ui.components.SidebarDestination
 import com.chatroom.app.ui.screens.ApiAccountScreen
 import com.chatroom.app.ui.screens.ChatScreen
-import com.chatroom.app.ui.screens.CodingAssistantWizardScreen
 import com.chatroom.app.ui.screens.IdentityScreen
 import com.chatroom.app.ui.screens.RepoBrowserScreen
 import com.chatroom.app.ui.screens.SessionManagerScreen
@@ -41,14 +39,10 @@ fun AppNavigation(
     userProfileViewModel: UserProfileViewModel,
     terminalSessions: Map<String, TerminalSession>,
     onToggleSidebar: () -> Unit,
-    onSetupNavigate: (repoUrl: String) -> Unit,
     onCloseSidebar: () -> Unit = onToggleSidebar,
     modifier: Modifier = Modifier
 ) {
     val activeSession by chatViewModel.activeSession.collectAsState()
-    val apiAccounts by chatViewModel.apiAccounts.collectAsState()
-    val sessions by chatViewModel.sessions.collectAsState()
-    val codingAssistantCount = sessions.count { it.type == SessionType.CODING_ASSISTANT }
 
     AnimatedContent(
         targetState = currentDestination,
@@ -72,17 +66,7 @@ fun AppNavigation(
                 )
             }
             SidebarDestination.CodingAssistantSetup -> {
-                CodingAssistantWizardScreen(
-                    apiAccounts = apiAccounts,
-                    currentCodingAssistantCount = codingAssistantCount,
-                    onCreate = { apiAccountId, systemPrompt, repoUrl, repoOwner, repoName ->
-                        chatViewModel.createCodingAssistantSession(
-                            apiAccountId, systemPrompt, repoUrl, repoOwner, repoName
-                        )
-                    },
-                    onOpenRepoLogin = { url -> onSetupNavigate(url) },
-                    onBack = { /* will close via MainActivity */ }
-                )
+                // Handled directly in MainActivity
             }
             SidebarDestination.Settings -> SettingsScreen(
                 viewModel = settingsViewModel,
