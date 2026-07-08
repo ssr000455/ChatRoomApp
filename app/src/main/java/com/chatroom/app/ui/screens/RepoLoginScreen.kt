@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
@@ -53,6 +52,7 @@ fun RepoLoginScreen(
     var isLoading by remember { mutableStateOf(true) }
     var currentUrl by remember { mutableStateOf("") }
     var progress by remember { mutableStateOf(0) }
+    var webView by remember { mutableStateOf<WebView?>(null) }
 
     Column(
         modifier = modifier
@@ -70,8 +70,8 @@ fun RepoLoginScreen(
                 modifier = Modifier.size(44.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
@@ -91,6 +91,17 @@ fun RepoLoginScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
+                )
+            }
+            // Refresh button
+            IconButton(
+                onClick = { webView?.reload() },
+                modifier = Modifier.size(44.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Refresh",
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -160,6 +171,7 @@ fun RepoLoginScreen(
                         // Load the repo URL
                         loadUrl(repoUrl)
                     }
+                    webView = this
                 },
                 modifier = Modifier.fillMaxSize()
             )
@@ -189,8 +201,21 @@ fun RepoLoginScreen(
                     tint = MaterialTheme.colorScheme.error
                 )
             }
+            // Refresh button
+            IconButton(
+                onClick = { webView?.reload() },
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Refresh",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Text(
-                text = "Log in to your Git provider to grant access",
+                text = "登录授权后点击 ✓ 完成",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.align(Alignment.CenterVertically)
