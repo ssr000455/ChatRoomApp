@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.chatroom.app.data.api.ChatApiService
 import com.chatroom.app.data.api.WebSearchService
+import com.chatroom.app.data.api.searchWithSources
 import com.chatroom.app.data.model.ApiAccount
 import com.chatroom.app.data.model.ChatMessage
 import com.chatroom.app.data.model.ChatRequest

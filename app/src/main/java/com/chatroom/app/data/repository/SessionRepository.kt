@@ -11,8 +11,6 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 private val Context.sessionDataStore by preferencesDataStore(name = "sessions")
 
@@ -28,8 +26,8 @@ class SessionRepository(private val context: Context) {
     }
 
     // In-memory cache to avoid repeated deserialization
+    @Volatile
     private var cachedSessions: List<Session>? = null
-    private val cacheMutex = Mutex()
 
     val sessions: Flow<List<Session>> = context.sessionDataStore.data.map { prefs ->
         val json = prefs[SESSIONS_KEY] ?: "[]"
@@ -47,53 +45,48 @@ class SessionRepository(private val context: Context) {
         list.find { it.id == sessionId }
     }
 
-    private suspend fun getCachedSessions(json: String? = null): List<Session> = cacheMutex.withLock {
-        if (cachedSessions != null) return@withLock cachedSessions!!
-        val raw = json ?: return@withLock emptyList()
+    @Synchronized
+    private fun getCachedSessions(json: String? = null): List<Session> {
+        if (cachedSessions != null) return cachedSessions!!
+        val raw = json ?: return emptyList()
         val type = object : TypeToken<List<Session>>() {}.type
-        gson.fromJson<List<Session>>(raw, type).also { cachedSessions = it }
+        return gson.fromJson(raw, type).also { cachedSessions = it }
     }
 
     suspend fun createSession(session: Session): Result<Unit> = runCatching {
-        cacheMutex.withLock {
-            val current = (cachedSessions ?: emptyList()).toMutableList()
-            if (current.size >= MAX_SESSIONS) {
-                throw IllegalStateException("Maximum $MAX_SESSIONS sessions allowed")
-            }
-            current.add(0, session)
-            cachedSessions = current
-            context.sessionDataStore.edit { prefs ->
-                prefs[SESSIONS_KEY] = gson.toJson(current)
-                prefs[ACTIVE_SESSION_ID_KEY] = session.id
-            }
+        val current = getCachedSessions().toMutableList()
+        if (current.size >= MAX_SESSIONS) {
+            throw IllegalStateException("Maximum $MAX_SESSIONS sessions allowed")
+        }
+        current.add(0, session)
+        cachedSessions = current
+        context.sessionDataStore.edit { prefs ->
+            prefs[SESSIONS_KEY] = gson.toJson(current)
+            prefs[ACTIVE_SESSION_ID_KEY] = session.id
         }
     }
 
     suspend fun updateSession(session: Session) {
-        cacheMutex.withLock {
-            val current = (cachedSessions ?: emptyList()).toMutableList()
-            val index = current.indexOfFirst { it.id == session.id }
-            if (index >= 0) {
-                current[index] = session.copy(updatedAt = System.currentTimeMillis())
-                cachedSessions = current
-                context.sessionDataStore.edit { prefs ->
-                    prefs[SESSIONS_KEY] = gson.toJson(current)
-                }
+        val current = getCachedSessions().toMutableList()
+        val index = current.indexOfFirst { it.id == session.id }
+        if (index >= 0) {
+            current[index] = session.copy(updatedAt = System.currentTimeMillis())
+            cachedSessions = current
+            context.sessionDataStore.edit { prefs ->
+                prefs[SESSIONS_KEY] = gson.toJson(current)
             }
         }
     }
 
     suspend fun deleteSession(sessionId: String) {
-        cacheMutex.withLock {
-            val current = (cachedSessions ?: emptyList()).toMutableList()
-            current.removeAll { it.id == sessionId }
-            cachedSessions = current
-            val activeId = context.sessionDataStore.data.first()[ACTIVE_SESSION_ID_KEY]
-            context.sessionDataStore.edit { prefs ->
-                prefs[SESSIONS_KEY] = gson.toJson(current)
-                if (activeId == sessionId) {
-                    prefs.remove(ACTIVE_SESSION_ID_KEY)
-                }
+        val current = getCachedSessions().toMutableList()
+        current.removeAll { it.id == sessionId }
+        cachedSessions = current
+        val activeId = context.sessionDataStore.data.first()[ACTIVE_SESSION_ID_KEY]
+        context.sessionDataStore.edit { prefs ->
+            prefs[SESSIONS_KEY] = gson.toJson(current)
+            if (activeId == sessionId) {
+                prefs.remove(ACTIVE_SESSION_ID_KEY)
             }
         }
     }
@@ -105,53 +98,47 @@ class SessionRepository(private val context: Context) {
     }
 
     suspend fun addMessageToSession(sessionId: String, message: ChatMessage): Result<Unit> = runCatching {
-        cacheMutex.withLock {
-            val current = (cachedSessions ?: emptyList()).toMutableList()
-            val index = current.indexOfFirst { it.id == sessionId }
-            if (index < 0) throw IllegalStateException("Session not found")
+        val current = getCachedSessions().toMutableList()
+        val index = current.indexOfFirst { it.id == sessionId }
+        if (index < 0) throw IllegalStateException("Session not found")
 
-            val session = current[index]
-            val newMessages = session.messages + message
-            val totalTokens = newMessages.sumOf { it.content.length / 2 }
+        val session = current[index]
+        val newMessages = session.messages + message
+        val totalTokens = newMessages.sumOf { it.content.length / 2 }
 
-            if (totalTokens > MAX_TOKENS) {
-                throw IllegalStateException("Session token limit ($MAX_TOKENS) exceeded")
-            }
+        if (totalTokens > MAX_TOKENS) {
+            throw IllegalStateException("Session token limit ($MAX_TOKENS) exceeded")
+        }
 
-            current[index] = session.copy(
-                messages = newMessages,
-                updatedAt = System.currentTimeMillis()
-            )
-            cachedSessions = current
-            context.sessionDataStore.edit { prefs ->
-                prefs[SESSIONS_KEY] = gson.toJson(current)
-            }
+        current[index] = session.copy(
+            messages = newMessages,
+            updatedAt = System.currentTimeMillis()
+        )
+        cachedSessions = current
+        context.sessionDataStore.edit { prefs ->
+            prefs[SESSIONS_KEY] = gson.toJson(current)
         }
     }
 
     suspend fun removeMessageAtIndex(sessionId: String, index: Int): Result<Unit> = runCatching {
-        cacheMutex.withLock {
-            val current = (cachedSessions ?: emptyList()).toMutableList()
-            val sIdx = current.indexOfFirst { it.id == sessionId }
-            if (sIdx < 0) throw IllegalStateException("Session not found")
+        val current = getCachedSessions().toMutableList()
+        val sIdx = current.indexOfFirst { it.id == sessionId }
+        if (sIdx < 0) throw IllegalStateException("Session not found")
 
-            val session = current[sIdx]
-            val newMessages = session.messages.toMutableList()
-            if (index < 0 || index >= newMessages.size) throw IndexOutOfBoundsException("Message index $index out of bounds")
-            newMessages.removeAt(index)
+        val session = current[sIdx]
+        val newMessages = session.messages.toMutableList()
+        if (index < 0 || index >= newMessages.size) throw IndexOutOfBoundsException("Message index $index out of bounds")
+        newMessages.removeAt(index)
 
-            current[sIdx] = session.copy(
-                messages = newMessages,
-                updatedAt = System.currentTimeMillis()
-            )
-            cachedSessions = current
-            context.sessionDataStore.edit { prefs ->
-                prefs[SESSIONS_KEY] = gson.toJson(current)
-            }
+        current[sIdx] = session.copy(
+            messages = newMessages,
+            updatedAt = System.currentTimeMillis()
+        )
+        cachedSessions = current
+        context.sessionDataStore.edit { prefs ->
+            prefs[SESSIONS_KEY] = gson.toJson(current)
         }
     }
 
-    suspend fun canCreateSession(): Boolean = cacheMutex.withLock {
-        (cachedSessions ?: emptyList()).size < MAX_SESSIONS
-    }
+    suspend fun canCreateSession(): Boolean = getCachedSessions().size < MAX_SESSIONS
 }

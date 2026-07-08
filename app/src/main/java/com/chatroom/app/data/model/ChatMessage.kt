@@ -1,8 +1,10 @@
 package com.chatroom.app.data.model
 
 import com.google.gson.annotations.SerializedName
+import java.util.UUID
 
 data class ChatMessage(
+    val id: String = UUID.randomUUID().toString(),
     val role: String,  // "user", "assistant", "system"
     val content: String,
     val attachments: List<Attachment> = emptyList(),
