@@ -72,29 +72,24 @@ class BackupManager(private val context: Context) {
 
     /** Import backup data from the Downloads folder. Returns success or error message. */
     suspend fun importBackup(): Result<String> = runCatching {
-        val json = readBackupFile() ?: throw java.io.FileNotFoundException("备份文件不存在: Download/$BACKUP_FILENAME")
-        val data: BackupData = gson.fromJson(json, BackupData::class.java)
+        val json = readBackupFile() ?: throw java.io.FileNotFoundException(
+            "备份文件不存在: Download/$BACKUP_FILENAME\n尝试手动选择文件恢复"
+        )
+        restoreFromJson(json)
+    }
 
-        userProfileRepo.replaceAll(data.userProfiles, data.activeUserId)
-        apiAccountRepo.replaceAll(data.apiAccounts, data.activeApiAccountId)
-        identityRepo.replaceAll(data.identities, data.activeIdentityId)
-        sessionRepo.replaceAll(data.sessions, data.activeSessionId)
-
-        "已从备份恢复 ${data.userProfiles.size} 个用户资料, " +
-                "${data.apiAccounts.size} 个API密钥, " +
-                "${data.identities.size} 个身份, " +
-                "${data.sessions.size} 个会话"
+    /** Import backup data from a user-picked URI (SAF file picker). */
+    suspend fun importBackupFromUri(uri: Uri): Result<String> = runCatching {
+        val json = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            inputStream.readBytes().toString(Charsets.UTF_8)
+        } ?: throw java.io.FileNotFoundException("无法读取选择的文件")
+        restoreFromJson(json)
     }
 
     /** Check if a backup file exists in the Downloads folder. */
     suspend fun hasBackupFile(): Boolean {
         return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                queryMediaStoreUri() != null
-            } else {
-                val file = getDownloadFile()
-                file.exists()
-            }
+            findBackupFileUri() != null || getDownloadFile().exists()
         } catch (e: Exception) {
             false
         }
@@ -110,6 +105,18 @@ class BackupManager(private val context: Context) {
 
         val result = importBackup()
         return result.isSuccess
+    }
+
+    private suspend fun restoreFromJson(json: String): String {
+        val data: BackupData = gson.fromJson(json, BackupData::class.java)
+        userProfileRepo.replaceAll(data.userProfiles, data.activeUserId)
+        apiAccountRepo.replaceAll(data.apiAccounts, data.activeApiAccountId)
+        identityRepo.replaceAll(data.identities, data.activeIdentityId)
+        sessionRepo.replaceAll(data.sessions, data.activeSessionId)
+        return "已从备份恢复 ${data.userProfiles.size} 个用户资料, " +
+                "${data.apiAccounts.size} 个API密钥, " +
+                "${data.identities.size} 个身份, " +
+                "${data.sessions.size} 个会话"
     }
 
     // ─── API 29+ MediaStore ───────────────────────────────────────────
@@ -181,18 +188,22 @@ class BackupManager(private val context: Context) {
     }
 
     private fun readBackupFile(): String? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            readViaMediaStore()
-        } else {
+        // Try MediaStore first (API 29+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val uri = queryMediaStoreUri()
+            if (uri != null) {
+                return context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    inputStream.readBytes().toString(Charsets.UTF_8)
+                }
+            }
+        }
+
+        // Fallback: direct file path (works after reinstall on most devices)
+        return try {
             val file = getDownloadFile()
             if (file.exists()) file.readBytes().toString(Charsets.UTF_8) else null
-        }
-    }
-
-    private fun readViaMediaStore(): String? {
-        val uri = queryMediaStoreUri() ?: return null
-        return context.contentResolver.openInputStream(uri)?.use { inputStream ->
-            inputStream.readBytes().toString(Charsets.UTF_8)
+        } catch (_: Exception) {
+            null
         }
     }
 }

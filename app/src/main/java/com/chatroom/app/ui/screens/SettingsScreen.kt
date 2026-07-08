@@ -5,6 +5,8 @@ import androidx.compose.animation.core.tween
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -63,6 +65,7 @@ import com.chatroom.app.ui.theme.ThemeMode
 import com.chatroom.app.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Upload
 
@@ -298,6 +301,42 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(stringResource(R.string.import_backup))
                 }
+            }
+
+            // SAF file picker for manual restore
+            val importLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.OpenDocument()
+            ) { uri: Uri? ->
+                if (uri != null) {
+                    val failedStr = context.getString(R.string.import_failed)
+                    scope.launch {
+                        backupStatus = context.getString(R.string.importing)
+                        val result = backupManager.importBackupFromUri(uri)
+                        result.onSuccess { msg ->
+                            backupStatus = msg
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        }.onFailure { e ->
+                            backupStatus = "$failedStr: ${e.message}"
+                            Toast.makeText(context, failedStr, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+
+            OutlinedButton(
+                onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FolderOpen,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("选择备份文件...")
             }
 
             Spacer(modifier = Modifier.height(24.dp))

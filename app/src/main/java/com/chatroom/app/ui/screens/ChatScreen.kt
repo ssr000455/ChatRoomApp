@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.TravelExplore
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -73,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.chatroom.app.R
+import com.chatroom.app.data.model.AiAccessLevel
 import com.chatroom.app.data.model.ChatMessage
 import com.chatroom.app.data.model.SessionType
 import com.chatroom.app.ui.components.ChangeReviewSheet
@@ -625,7 +627,8 @@ fun ChatScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    AiAccessLevel.entries.forEach { level ->
+                    val levels = AiAccessLevel.values()
+                    levels.forEach { level ->
                         val label = when (level) {
                             AiAccessLevel.READ_ONLY -> "Read Only"
                             AiAccessLevel.READ_WRITE -> "Read + Write"
