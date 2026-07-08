@@ -123,7 +123,7 @@
     <string name="logged_in_as">已登录：%s</string>
     <string name="logged_in_badge">已登录</string>
 
-    <!-- Backup & Restore -->
+    <!-- Backup and Restore -->
     <string name="backup_title">备份与恢复</string>
     <string name="export_backup">导出备份</string>
     <string name="import_backup">导入备份</string>

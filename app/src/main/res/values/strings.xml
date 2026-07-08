@@ -111,7 +111,7 @@
     <string name="user_profile_gender_hint">e.g. Male, Female</string>
     <string name="user_profile_personality">Personality</string>
     <string name="user_profile_personality_hint">e.g. outgoing, curious, thoughtful</string>
-    <string name="user_profile_hobbies">Hobbies & Interests</string>
+    <string name="user_profile_hobbies">Hobbies &amp; Interests</string>
     <string name="user_profile_hobbies_hint">Describe what you enjoy doing…</string>
     <string name="user_profile_background">Background</string>
     <string name="user_profile_background_hint">Describe your background…</string>
@@ -123,8 +123,8 @@
     <string name="logged_in_as">Logged in as %s</string>
     <string name="logged_in_badge">Logged In</string>
 
-    <!-- Backup & Restore -->
-    <string name="backup_title">Backup & Restore</string>
+    <!-- Backup and Restore -->
+    <string name="backup_title">Backup &amp; Restore</string>
     <string name="export_backup">Export Backup</string>
     <string name="import_backup">Import Backup</string>
     <string name="backup_success">Backup exported successfully</string>
