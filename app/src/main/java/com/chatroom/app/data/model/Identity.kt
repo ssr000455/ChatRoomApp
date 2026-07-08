@@ -8,6 +8,7 @@ data class Identity(
     val description: String = "",
     val avatarEmoji: String = "\uD83D\uDE0A",
     val photoUri: String = "",
+    val photoData: String = "",
     val personality: String = "",
     val knowledge: String = "",
     val tone: String = "",

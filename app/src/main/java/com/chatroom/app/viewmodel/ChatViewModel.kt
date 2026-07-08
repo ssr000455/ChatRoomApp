@@ -231,7 +231,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                     // Strip reasoning content if deep thinking is not enabled
                     val finalMessage = if (!session.deepThinkingEnabled) {
-                        ChatMessage(role = aiMessage.role, content = aiMessage.content, attachments = aiMessage.attachments, reasoningContent = null)
+                        ChatMessage(role = aiMessage.role ?: "assistant", content = aiMessage.content ?: "", attachments = aiMessage.attachments ?: emptyList(), reasoningContent = null)
                     } else {
                         aiMessage
                     }
@@ -321,7 +321,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                     // Strip reasoning content if deep thinking is not enabled
                     val finalMessage = if (!session.deepThinkingEnabled) {
-                        ChatMessage(role = aiMessage.role, content = aiMessage.content, attachments = aiMessage.attachments, reasoningContent = null)
+                        ChatMessage(role = aiMessage.role ?: "assistant", content = aiMessage.content ?: "", attachments = aiMessage.attachments ?: emptyList(), reasoningContent = null)
                     } else {
                         aiMessage
                     }
@@ -520,7 +520,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         ?: ChatMessage(role = "assistant", content = "No response generated.")
 
                     val finalMessage = if (!updatedSession.deepThinkingEnabled) {
-                        ChatMessage(role = aiMessage.role, content = aiMessage.content, attachments = aiMessage.attachments, reasoningContent = null)
+                        ChatMessage(role = aiMessage.role ?: "assistant", content = aiMessage.content ?: "", attachments = aiMessage.attachments ?: emptyList(), reasoningContent = null)
                     } else {
                         aiMessage
                     }

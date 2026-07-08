@@ -4,6 +4,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -195,12 +198,22 @@ private fun AddIdentityForm(onSave: (Identity) -> Unit) {
     var tone by remember { mutableStateOf("") }
     var extraNotes by remember { mutableStateOf("") }
     var photoUri by remember { mutableStateOf("") }
+    var photoData by remember { mutableStateOf("") }
     var emoji by remember { mutableStateOf("\uD83D\uDE0A") }
 
+    val context = LocalContext.current
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { photoUri = it.toString() }
+        uri?.let {
+            val b64 = compressAndEncodeImage(context, it)
+            if (b64 != null) {
+                photoData = b64
+                photoUri = "data:image/jpeg;base64,$b64"
+            } else {
+                photoUri = it.toString()
+            }
+        }
     }
 
     Column(
@@ -221,10 +234,13 @@ private fun AddIdentityForm(onSave: (Identity) -> Unit) {
                     .clickable { imagePickerLauncher.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
-                if (photoUri.isNotBlank()) {
+                if (photoData.isNotBlank()) {
+                    val previewBytes = remember(photoData) {
+                        android.util.Base64.decode(photoData, android.util.Base64.DEFAULT)
+                    }
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(photoUri)
+                            .data(previewBytes)
                             .crossfade(true)
                             .build(),
                         contentDescription = "Avatar",
@@ -238,7 +254,35 @@ private fun AddIdentityForm(onSave: (Identity) -> Unit) {
                         modifier = Modifier
                             .matchParentSize()
                             .clip(CircleShape)
-                            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.3f)),
+                            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.3f))
+                            .clickable { imagePickerLauncher.launch("image/*") },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = stringResource(R.string.change_photo),
+                            tint = androidx.compose.ui.graphics.Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                } else if (photoUri.isNotBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(photoUri)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Avatar",
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clip(CircleShape)
+                            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.3f))
+                            .clickable { imagePickerLauncher.launch("image/*") },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -356,6 +400,7 @@ private fun AddIdentityForm(onSave: (Identity) -> Unit) {
                     description = description,
                     avatarEmoji = emoji,
                     photoUri = photoUri,
+                    photoData = photoData,
                     personality = personality,
                     knowledge = knowledge,
                     tone = tone,
@@ -391,7 +436,22 @@ private fun IdentityCard(
             .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (identity.photoUri.isNotBlank()) {
+            if (identity.photoData.isNotBlank()) {
+                val photoBytes = remember(identity.photoData) {
+                    android.util.Base64.decode(identity.photoData, android.util.Base64.DEFAULT)
+                }
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(photoBytes)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = identity.name,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else if (identity.photoUri.isNotBlank()) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(identity.photoUri)
@@ -472,5 +532,30 @@ private fun IdentityCard(
                 }
             }
         }
+    }
+}
+
+/**
+ * Compress a picked image to JPEG and encode as base64 string.
+ */
+private fun compressAndEncodeImage(context: Context, uri: Uri): String? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val bitmap = BitmapFactory.decodeStream(inputStream)
+        inputStream.close()
+        if (bitmap == null) return null
+        val maxSize = 512
+        val scale = if (bitmap.width > maxSize) maxSize.toFloat() / bitmap.width else 1f
+        val scaled = if (scale < 1f) {
+            Bitmap.createScaledBitmap(bitmap, (bitmap.width * scale).toInt(), (bitmap.height * scale).toInt(), true)
+        } else {
+            bitmap
+        }
+        val baos = java.io.ByteArrayOutputStream()
+        scaled.compress(Bitmap.CompressFormat.JPEG, 70, baos)
+        val bytes = baos.toByteArray()
+        android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT)
+    } catch (e: Throwable) {
+        null
     }
 }
