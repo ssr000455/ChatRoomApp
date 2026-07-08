@@ -89,7 +89,7 @@ class BackupManager(private val context: Context) {
     /** Check if a backup file exists in the Downloads folder. */
     suspend fun hasBackupFile(): Boolean {
         return try {
-            findBackupFileUri() != null || getDownloadFile().exists()
+            queryMediaStoreUri() != null || getDownloadFile().exists()
         } catch (e: Exception) {
             false
         }
