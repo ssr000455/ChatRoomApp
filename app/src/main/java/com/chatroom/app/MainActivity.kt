@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -35,6 +36,7 @@ import com.chatroom.app.viewmodel.IdentityViewModel
 import com.chatroom.app.viewmodel.SettingsViewModel
 import com.chatroom.app.viewmodel.UserProfileViewModel
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -105,6 +107,7 @@ private fun ChatRoomAppContent(
 
     // Terminal sessions per coding assistant session
     val terminalSessions = remember { mutableStateMapOf<String, TerminalSession>() }
+    val terminalScope = rememberCoroutineScope()
 
     // Auto-create terminal sessions for coding assistant sessions
     LaunchedEffect(sessions) {
@@ -118,11 +121,15 @@ private fun ChatRoomAppContent(
                     context.filesDir.resolve("workspace").absolutePath
                 }
                 ts.start(workDir)
-                // Initialize toolchain (BusyBox etc.) - LaunchedEffect is already a coroutine scope
-                ts.initToolchain { progress ->
-                    android.util.Log.d("Toolchain", progress)
-                }
+                // Add to map immediately so TerminalScreen can find it
                 terminalSessions[session.id] = ts
+                // Initialize toolchain (BusyBox etc.) in background
+                // Don't block LaunchedEffect — it may get cancelled if sessions changes
+                terminalScope.launch {
+                    ts.initToolchain { progress ->
+                        android.util.Log.d("Toolchain", progress)
+                    }
+                }
             }
         }
     }

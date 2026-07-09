@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SignalWifiStatusbar4Bar
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -38,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -167,7 +170,7 @@ fun RepoBrowserScreen(
     // Check git availability on startup (check both system PATH and app's toolchain bin)
     LaunchedEffect(Unit) {
         checkingGit = true
-        gitAvailable = checkGitAvailable()
+        gitAvailable = withContext(Dispatchers.IO) { checkGitAvailable() }
         checkingGit = false
     }
 
@@ -187,6 +190,10 @@ fun RepoBrowserScreen(
     var installProgress by remember { mutableStateOf("") }
     var showPackageManager by remember { mutableStateOf(false) }
     var busyboxStatus by remember { mutableStateOf(Triple(false, false, "")) } // (checked, installed, arch)
+
+    // Clone speed tracking
+    var cloneSpeed by remember { mutableStateOf("") }
+    var clonePercentage by remember { mutableFloatStateOf(0f) }
 
     // Refresh file list
     fun refreshFiles(dir: File, onResult: (List<RepoFile>) -> Unit) {
@@ -217,11 +224,15 @@ fun RepoBrowserScreen(
         isCloning = false
         cloneProgress = "克隆已取消"
         cloneError = null
+        cloneSpeed = ""
+        clonePercentage = 0f
     }
 
     // Start clone (cancelable)
     fun startClone() {
         if (repoUrl.isBlank()) return
+        cloneSpeed = ""
+        clonePercentage = 0f
 
         // Check git availability
         if (!gitAvailable) {
@@ -279,7 +290,7 @@ fun RepoBrowserScreen(
 
                 val result = withContext(Dispatchers.IO) {
                     val pb = ProcessBuilder()
-                        .command("git", "clone", "--depth", "1", authUrl, targetDir.absolutePath)
+                        .command("git", "clone", "--progress", "--depth", "1", authUrl, targetDir.absolutePath)
                         .redirectErrorStream(true)
                     // Add app's tools bin directory to PATH for bundled git
                     val toolsBin = context.filesDir.resolve("tools/bin")
@@ -298,6 +309,9 @@ fun RepoBrowserScreen(
                     // Use a timeout: if no output for 30s, consider it stuck
                     val startTime = System.currentTimeMillis()
                     val timeout = 60000L
+                    // Regexes to parse git clone progress and speed
+                    val speedRegex = Regex("""\|\s*([\d.]+\s+\w+/s)""")
+                    val pctRegex = Regex("""Receiving objects:\s+(\d+)%""")
                     while (isActive) {
                         if (reader.ready()) {
                             val line = reader.readLine()
@@ -305,6 +319,16 @@ fun RepoBrowserScreen(
                             output.appendLine(line)
                             if (line.isNotBlank()) {
                                 cloneProgress = line
+                                // Parse download speed
+                                val speedMatch = speedRegex.find(line)
+                                if (speedMatch != null) {
+                                    cloneSpeed = speedMatch.groupValues[1]
+                                }
+                                // Parse progress percentage
+                                val pctMatch = pctRegex.find(line)
+                                if (pctMatch != null) {
+                                    clonePercentage = pctMatch.groupValues[1].toFloatOrNull()?.div(100f) ?: 0f
+                                }
                             }
                         } else {
                             // Check timeout
@@ -501,36 +525,94 @@ fun RepoBrowserScreen(
 
         // Loading / progress with cancel button
         if (isCloning) {
-            Column(
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = cloneProgress.ifBlank { "克隆中..." },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    .padding(16.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { cancelClone() },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    // WiFi icon + title
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Wifi,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "正在克隆仓库",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = repoUrl,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Progress bar
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth()
                     )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("取消克隆")
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Progress text + speed
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = cloneProgress.ifBlank { "连接中..." },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (cloneSpeed.isNotBlank()) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = cloneSpeed,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Cancel button
+                    OutlinedButton(
+                        onClick = { cancelClone() },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("取消克隆")
+                    }
                 }
             }
         }
@@ -646,7 +728,7 @@ fun RepoBrowserScreen(
                                         }
                                         installingPkg = null
                                         // Re-check git after busybox (provides wget)
-                                        gitAvailable = checkGitAvailable()
+                                        gitAvailable = withContext(Dispatchers.IO) { checkGitAvailable() }
                                     }
                                 },
                                 enabled = installingPkg == null,
@@ -709,7 +791,7 @@ fun RepoBrowserScreen(
                                                 installingPkg = null
                                                 // Re-check git after install
                                                 if (pkg.name == "git") {
-                                                    gitAvailable = checkGitAvailable()
+                                                    gitAvailable = withContext(Dispatchers.IO) { checkGitAvailable() }
                                                 }
                                             }
                                         },

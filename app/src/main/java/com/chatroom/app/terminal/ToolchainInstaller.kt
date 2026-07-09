@@ -132,33 +132,37 @@ class ToolchainInstaller(private val baseDir: File) {
         else -> "aarch64"
     }
 
+    private suspend fun reportProgress(onProgress: (String) -> Unit, message: String) {
+        withContext(Dispatchers.Main) { onProgress(message) }
+    }
+
     suspend fun installBusybox(onProgress: (String) -> Unit = {}): Boolean = withContext(Dispatchers.IO) {
         if (isBusyboxInstalled()) {
-            onProgress("BusyBox 已安装")
+            reportProgress(onProgress, "BusyBox 已安装")
             return@withContext true
         }
         binDir.mkdirs()
         toolsHome.mkdirs()
         val arch = archSuffix()
         val url = "https://busybox.net/downloads/binaries/1.35.0/busybox-$arch"
-        onProgress("正在下载 BusyBox...")
+        reportProgress(onProgress, "正在下载 BusyBox...")
         try {
             downloadFile(url, binFile("busybox"))
             binFile("busybox").setExecutable(true)
             createAppletSymlinks()
             Log.d(TAG, "BusyBox installed")
-            onProgress("BusyBox 安装完成")
+            reportProgress(onProgress, "BusyBox 安装完成")
             return@withContext true
         } catch (e: Exception) {
             Log.e(TAG, "BusyBox download failed: ${e.message}")
-            onProgress("BusyBox 下载失败: ${e.message}")
+            reportProgress(onProgress, "BusyBox 下载失败: ${e.message}")
             return@withContext false
         }
     }
 
     suspend fun installPackage(pkg: ExtensionPackage, onProgress: (String) -> Unit = {}): Boolean = withContext(Dispatchers.IO) {
         if (isPackageInstalled(pkg)) {
-            onProgress("${pkg.displayName} 已安装")
+            reportProgress(onProgress, "${pkg.displayName} 已安装")
             return@withContext true
         }
         binDir.mkdirs()
@@ -166,16 +170,16 @@ class ToolchainInstaller(private val baseDir: File) {
 
         val arch = archSuffix()
         val url = pkg.urls[arch] ?: run {
-            onProgress("${pkg.displayName}: 不支持当前架构 ($arch)")
+            reportProgress(onProgress, "${pkg.displayName}: 不支持当前架构 ($arch)")
             return@withContext false
         }
 
-        onProgress("正在下载 ${pkg.displayName} ${pkg.version}...")
+        reportProgress(onProgress, "正在下载 ${pkg.displayName} ${pkg.version}...")
         try {
             if (pkg.isZip) {
                 val zipFile = File(toolsDir, "${pkg.name}.zip")
                 downloadFile(url, zipFile)
-                onProgress("正在解压 ${pkg.displayName}...")
+                reportProgress(onProgress, "正在解压 ${pkg.displayName}...")
                 unzipPackage(zipFile, binDir, pkg)
                 zipFile.delete()
             } else {
@@ -186,7 +190,7 @@ class ToolchainInstaller(private val baseDir: File) {
             if (target.isFile) {
                 target.setExecutable(true)
                 Log.d(TAG, "${pkg.displayName} installed: ${target.absolutePath}")
-                onProgress("${pkg.displayName} ${pkg.version} 安装完成")
+                reportProgress(onProgress, "${pkg.displayName} ${pkg.version} 安装完成")
                 // Verify
                 try {
                     val proc = ProcessBuilder(target.absolutePath, "--version")
@@ -194,16 +198,16 @@ class ToolchainInstaller(private val baseDir: File) {
                         .start()
                     val verOut = proc.inputStream.bufferedReader().readText().take(100)
                     proc.waitFor()
-                    onProgress("${pkg.displayName} ${pkg.version} 安装完成: $verOut")
+                    reportProgress(onProgress, "${pkg.displayName} ${pkg.version} 安装完成: $verOut")
                 } catch (_: Exception) {}
                 return@withContext true
             } else {
-                onProgress("${pkg.displayName}: 解压后未找到二进制文件")
+                reportProgress(onProgress, "${pkg.displayName}: 解压后未找到二进制文件")
                 return@withContext false
             }
         } catch (e: Exception) {
             Log.e(TAG, "${pkg.displayName} install failed: ${e.message}")
-            onProgress("${pkg.displayName} 安装失败: ${e.message}")
+            reportProgress(onProgress, "${pkg.displayName} 安装失败: ${e.message}")
             return@withContext false
         }
     }
