@@ -118,11 +118,9 @@ private fun ChatRoomAppContent(
                     context.filesDir.resolve("workspace").absolutePath
                 }
                 ts.start(workDir)
-                // Initialize toolchain (BusyBox etc.) in background
-                kotlinx.coroutines.GlobalScope.launch {
-                    ts.initToolchain { progress ->
-                        android.util.Log.d("Toolchain", progress)
-                    }
+                // Initialize toolchain (BusyBox etc.) - LaunchedEffect is already a coroutine scope
+                ts.initToolchain { progress ->
+                    android.util.Log.d("Toolchain", progress)
                 }
                 terminalSessions[session.id] = ts
             }

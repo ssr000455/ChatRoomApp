@@ -29,7 +29,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -140,13 +139,6 @@ fun RepoBrowserScreen(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { }
 
-    // Check git availability on startup (check both system PATH and app's toolchain bin)
-    LaunchedEffect(Unit) {
-        checkingGit = true
-        gitAvailable = checkGitAvailable()
-        checkingGit = false
-    }
-
     // Check git in system PATH and app's tools/bin directory
     fun checkGitAvailable(): Boolean {
         val toolsBin = context.filesDir.resolve("tools/bin")
@@ -170,6 +162,13 @@ fun RepoBrowserScreen(
         } catch (e: Exception) {
             false
         }
+    }
+
+    // Check git availability on startup (check both system PATH and app's toolchain bin)
+    LaunchedEffect(Unit) {
+        checkingGit = true
+        gitAvailable = checkGitAvailable()
+        checkingGit = false
     }
 
     // View mode toggle
@@ -667,7 +666,13 @@ fun RepoBrowserScreen(
                     }
 
                     if (bbInstalled) {
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(1.dp)
+                                .padding(vertical = 4.dp)
+                                .background(MaterialTheme.colorScheme.outlineVariant)
+                        )
 
                         // Package list
                         availablePackages.forEach { pkg ->
