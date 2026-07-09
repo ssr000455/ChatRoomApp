@@ -13,6 +13,16 @@ data class UserProfile(
     val avatarData: String = "",
     val createdAt: Long = System.currentTimeMillis()
 ) {
+    fun sanitize(): UserProfile = copy(
+        name = name ?: "Unknown",
+        gender = gender ?: "",
+        personality = personality ?: "",
+        hobbies = hobbies ?: "",
+        background = background ?: "",
+        avatarUri = avatarUri ?: "",
+        avatarData = avatarData ?: ""
+    )
+
     fun toContextString(): String {
         val parts = mutableListOf<String>()
         parts.add("User name: $name")

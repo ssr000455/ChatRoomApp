@@ -47,11 +47,21 @@ data class Session(
         get() = if (repoOwner.isNotBlank() && repoName.isNotBlank()) "$repoOwner/$repoName" else title
 
     /**
-     * Sanitize after Gson deserialization: null lists -> empty lists.
+     * Sanitize after Gson deserialization: null lists -> empty lists, null Strings -> defaults.
      * Gson bypasses constructor defaults when deserializing old data.
      */
     fun sanitize(): Session = copy(
         messages = (messages ?: emptyList()).map { it.sanitize() },
-        pendingChanges = pendingChanges ?: emptyList()
+        pendingChanges = (pendingChanges ?: emptyList()).map { it.sanitize() },
+        title = title ?: "New Chat",
+        apiAccountId = apiAccountId ?: "",
+        identityId = identityId ?: "",
+        systemPrompt = systemPrompt ?: "You are a helpful assistant.",
+        repoUrl = repoUrl ?: "",
+        repoOwner = repoOwner ?: "",
+        repoName = repoName ?: "",
+        repoBranch = repoBranch ?: "main",
+        localPath = localPath ?: "",
+        repoToken = repoToken ?: ""
     )
 }

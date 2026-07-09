@@ -39,6 +39,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
@@ -67,6 +69,13 @@ fun TerminalScreen(
     var inputValue by remember { mutableStateOf(TextFieldValue("")) }
     val scope = rememberCoroutineScope()
     val prompt = "${terminalSession.workingDirectory}$ "
+
+    val focusRequester = remember { FocusRequester() }
+
+    // Auto-focus the input field when terminal screen appears
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
 
     // Auto-scroll to bottom
     LaunchedEffect(history.size) {
@@ -216,52 +225,54 @@ fun TerminalScreen(
                 }
                 Spacer(modifier = Modifier.height(2.dp))
             }
+        }
 
-            // Input line with Enter key handling
-            item {
-                Row {
-                    Text(
-                        text = prompt,
-                        style = TextStyle(
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 13.sp,
-                            color = promptColor
-                        )
-                    )
-                    Box(modifier = Modifier.weight(1f)) {
-                        BasicTextField(
-                            value = inputValue,
-                            onValueChange = { inputValue = it },
-                            textStyle = TextStyle(
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 13.sp,
-                                color = textColor
-                            ),
-                            cursorBrush = SolidColor(textColor),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                            keyboardActions = KeyboardActions(onSend = { executeCommand() }),
-                            modifier = Modifier.fillMaxWidth(),
-                            decorationBox = { innerTextField ->
-                                if (inputValue.text.isEmpty()) {
-                                    Text(
-                                        text = stringResource(R.string.terminal_input_hint),
-                                        style = TextStyle(
-                                            fontFamily = FontFamily.Monospace,
-                                            fontSize = 13.sp,
-                                            color = textColor.copy(alpha = 0.3f)
-                                        )
-                                    )
-                                }
-                                innerTextField()
-                            }
-                        )
+        // Input line (outside LazyColumn to avoid touch event conflicts)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(androidx.compose.ui.graphics.Color(0xFF2D2D2D))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = prompt,
+                style = TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 13.sp,
+                    color = promptColor
+                )
+            )
+            Box(modifier = Modifier.weight(1f)) {
+                BasicTextField(
+                    value = inputValue,
+                    onValueChange = { inputValue = it },
+                    textStyle = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 13.sp,
+                        color = textColor
+                    ),
+                    cursorBrush = SolidColor(textColor),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = { executeCommand() }),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
+                    decorationBox = { innerTextField ->
+                        if (inputValue.text.isEmpty()) {
+                            Text(
+                                text = stringResource(R.string.terminal_input_hint),
+                                style = TextStyle(
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 13.sp,
+                                    color = textColor.copy(alpha = 0.3f)
+                                )
+                            )
+                        }
+                        innerTextField()
                     }
-                }
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
+                )
             }
         }
 

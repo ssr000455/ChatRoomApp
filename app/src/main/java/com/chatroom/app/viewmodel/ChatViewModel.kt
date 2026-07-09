@@ -149,8 +149,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun setSessionMode(sessionId: String, mode: SessionMode) {
-        viewModelScope.launch {
+    fun setSessionMode(sessionId: String, mode: SessionMode): Job {
+        return viewModelScope.launch {
             val session = sessionRepo.activeSession.first() ?: return@launch
             if (session.id != sessionId) {
                 sessionRepo.setActiveSession(sessionId)

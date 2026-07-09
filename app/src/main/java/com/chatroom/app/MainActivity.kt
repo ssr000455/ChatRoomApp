@@ -191,8 +191,13 @@ private fun ChatRoomAppContent(
                 currentDestination = SidebarDestination.Main
             },
             onSelectSessionMode = { sessionId, mode ->
-                chatViewModel.setSessionMode(sessionId, mode)
-                currentDestination = SidebarDestination.Main
+                val job = chatViewModel.setSessionMode(sessionId, mode)
+                // Wait for mode change to complete before navigating,
+                // so the correct screen (Terminal/RepoBrowser) is shown immediately
+                terminalScope.launch {
+                    job.join()
+                    currentDestination = SidebarDestination.Main
+                }
             },
             onDeleteSession = { sessionId ->
                 chatViewModel.deleteSession(sessionId)

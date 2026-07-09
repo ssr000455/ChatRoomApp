@@ -143,7 +143,7 @@ class SessionRepository(private val context: Context) {
     suspend fun canCreateSession(): Boolean = getCachedSessions().size < MAX_SESSIONS
 
     suspend fun replaceAll(sessions: List<Session>, activeId: String?) {
-        val sorted = sessions.sortedByDescending { it.updatedAt }
+        val sorted = sessions.sortedByDescending { it.updatedAt }.map { it.sanitize() }
         cachedSessions = sorted
         context.sessionDataStore.edit { prefs ->
             prefs[SESSIONS_KEY] = gson.toJson(sorted)

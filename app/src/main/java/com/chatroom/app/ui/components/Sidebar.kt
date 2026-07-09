@@ -245,7 +245,7 @@ fun Sidebar(
                             }
 
                             // Add button when under limit
-                            if (codingSessions.isEmpty() || codingSessions.size < 3) {
+                            if (codingSessions.size < 3) {
                                 item {
                                     AddCodingAssistantButton(
                                         onClick = {
@@ -256,24 +256,6 @@ fun Sidebar(
                                 }
                             }
 
-                            item {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Divider(
-                                    color = MaterialTheme.colorScheme.outlineVariant,
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                            }
-                        } else {
-                            // Show add button when no coding assistants exist
-                            item {
-                                AddCodingAssistantButton(
-                                    onClick = {
-                                        onAddCodingAssistant()
-                                        onClose()
-                                    }
-                                )
-                            }
                             item {
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Divider(

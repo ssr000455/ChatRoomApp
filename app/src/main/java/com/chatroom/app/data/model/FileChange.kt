@@ -10,6 +10,13 @@ data class FileChange(
     val diff: String = "",
     val status: ChangeStatus = ChangeStatus.PENDING,
     val createdAt: Long = System.currentTimeMillis()
-)
+) {
+    fun sanitize(): FileChange = copy(
+        filePath = filePath ?: "",
+        originalContent = originalContent ?: "",
+        newContent = newContent ?: "",
+        diff = diff ?: ""
+    )
+}
 
 enum class ChangeStatus { PENDING, ACCEPTED, REJECTED }

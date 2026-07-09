@@ -93,7 +93,6 @@ class TerminalSession(
         try {
             val trimmed = command.trim()
             if (trimmed.isEmpty()) {
-                _isRunning.value = false
                 return@withContext Result.success(
                     CommandEntry("", "", _workingDirectory, 0)
                 )
@@ -103,7 +102,6 @@ class TerminalSession(
             if (trimmed == "clear") {
                 _history.value = emptyList()
                 _currentOutput.value = ""
-                _isRunning.value = false
                 return@withContext Result.success(
                     CommandEntry("clear", "", _workingDirectory, 0)
                 )
@@ -112,7 +110,6 @@ class TerminalSession(
             // Handle cd internally
             if (trimmed == "cd") {
                 _workingDirectory = File.separator
-                _isRunning.value = false
                 return@withContext Result.success(
                     CommandEntry("cd", "", _workingDirectory, 0)
                 )
@@ -127,7 +124,6 @@ class TerminalSession(
                 val normalized = newDir.normalize()
                 if (normalized.isDirectory) {
                     _workingDirectory = normalized.absolutePath
-                    _isRunning.value = false
                     return@withContext Result.success(
                         CommandEntry(trimmed, "", _workingDirectory, 0)
                     )
@@ -135,40 +131,76 @@ class TerminalSession(
                     val entry = CommandEntry(trimmed, "cd: $dir: No such directory", _workingDirectory, 1)
                     _history.value = _history.value + entry
                     _currentOutput.value = entry.output
-                    _isRunning.value = false
                     return@withContext Result.success(entry)
                 }
             }
 
-            // Run command
+            // Run command with timeout and proper cleanup
             val process = buildProcess(trimmed).start()
-            val output = try {
-                process.inputStream.bufferedReader().use { it.readText() }
-            } catch (e: Exception) {
-                "Error reading output: ${e.message}"
-            }
-            val exitCode = try {
-                process.waitFor()
-            } catch (e: Exception) {
-                -1
+            var processOutput = ""
+            var processExitCode = -1
+            try {
+                // Read output in chunks to avoid pipe buffer deadlock
+                val reader = process.inputStream.bufferedReader()
+                val outputBuilder = StringBuilder()
+                val commandTimeout = 30000L
+                val startTime = System.currentTimeMillis()
+                var timedOut = false
+                while (true) {
+                    if (reader.ready()) {
+                        val line = reader.readLine()
+                        if (line == null) break
+                        outputBuilder.appendLine(line)
+                    } else {
+                        // Check if process has exited
+                        try {
+                            processExitCode = process.exitValue()
+                            break
+                        } catch (_: IllegalThreadStateException) {
+                            // Process still running
+                        }
+                        // Check timeout
+                        if (System.currentTimeMillis() - startTime > commandTimeout) {
+                            timedOut = true
+                            process.destroyForcibly()
+                            outputBuilder.appendLine("\n[Command timed out after ${commandTimeout / 1000}s]")
+                            break
+                        }
+                        // Small delay to avoid busy-waiting
+                        Thread.sleep(50)
+                    }
+                }
+                // Read any remaining output
+                try {
+                    val remaining = reader.readText()
+                    if (remaining.isNotEmpty()) outputBuilder.append(remaining)
+                } catch (_: Exception) {}
+                processOutput = outputBuilder.toString().trimEnd()
+                if (!timedOut) {
+                    try {
+                        processExitCode = process.waitFor()
+                    } catch (_: Exception) {}
+                }
+            } finally {
+                // Always destroy the process to avoid zombie processes
+                try { process.destroyForcibly() } catch (_: Exception) {}
             }
 
-            val outputText = output.trimEnd()
-            _currentOutput.value = outputText
+            _currentOutput.value = processOutput
 
-            val entry = CommandEntry(trimmed, outputText, _workingDirectory, exitCode)
+            val entry = CommandEntry(trimmed, processOutput, _workingDirectory, processExitCode)
             _history.value = _history.value + entry
 
-            Log.d(tag, "Cmd: $trimmed, exit: $exitCode, out len: ${outputText.length}")
-            _isRunning.value = false
+            Log.d(tag, "Cmd: $trimmed, exit: $processExitCode, out len: ${processOutput.length}")
             Result.success(entry)
         } catch (e: Exception) {
             Log.e(tag, "Command error: ${e.message}")
             val entry = CommandEntry(command, "Error: ${e.message}", _workingDirectory, -1)
             _history.value = _history.value + entry
             _currentOutput.value = "Error: ${e.message}"
-            _isRunning.value = false
             Result.success(entry)
+        } finally {
+            _isRunning.value = false
         }
     }
 

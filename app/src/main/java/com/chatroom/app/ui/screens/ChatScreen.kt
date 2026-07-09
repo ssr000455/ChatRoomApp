@@ -45,6 +45,8 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Divider
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -196,10 +198,10 @@ fun ChatScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                if (activeApiAccount != null) {
+                activeApiAccount?.let { account ->
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = activeApiAccount!!.name.take(1),
+                        text = account.name.take(1),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
@@ -220,7 +222,8 @@ fun ChatScreen(
         }
 
         // Chat topic header (pinned, auto-generated)
-        if (activeSession != null && messages.isNotEmpty()) {
+        val sessionForHeader = activeSession
+        if (sessionForHeader != null && messages.isNotEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -229,17 +232,17 @@ fun ChatScreen(
             ) {
                 Column {
                     Text(
-                        text = activeSession!!.title,
+                        text = sessionForHeader.title,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1
                     )
                     val subtitle = buildString {
-                        if (activeIdentity != null) append(activeIdentity!!.name)
-                        if (activeApiAccount != null) {
+                        activeIdentity?.let { append(it.name) }
+                        activeApiAccount?.let {
                             if (isNotEmpty()) append(" · ")
-                            append(activeApiAccount!!.name)
+                            append(it.name)
                         }
                     }
                     if (subtitle.isNotEmpty()) {
@@ -613,9 +616,71 @@ fun ChatScreen(
                 Divider()
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // ── Coding Assistant Settings ──
-                if (activeSession?.isCodingAssistant == true) {
-                    val session = activeSession!!
+                // ── Translate ──
+                var translateText by remember { mutableStateOf("") }
+                var translateLang by remember { mutableStateOf("简体中文") }
+                val translateLanguages = listOf("简体中文", "繁體中文", "English")
+                Text(
+                    text = stringResource(R.string.translate),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Translate text to another language",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = translateText,
+                    onValueChange = { translateText = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    placeholder = { Text("Enter text to translate...", style = MaterialTheme.typography.bodySmall) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    translateLanguages.forEach { lang ->
+                        SuggestionChip(
+                            onClick = { translateLang = lang },
+                            label = { Text(lang, style = MaterialTheme.typography.labelSmall) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = if (translateLang == lang)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                else
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            ),
+                            border = null
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        if (translateText.isNotBlank()) {
+                            viewModel.toggleChatSettings()
+                            viewModel.translateMessage(translateText, translateLang)
+                        }
+                    },
+                    enabled = translateText.isNotBlank(),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.TravelExplore, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.translate))
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+                Divider()
+                Spacer(modifier = Modifier.height(16.dp))
+                val caSession = activeSession
+                if (caSession?.isCodingAssistant == true) {
+                    val session = caSession
 
                     // AI Access Level
                     Text(
@@ -765,9 +830,10 @@ fun ChatScreen(
                 }
 
                 // ── Review Changes (coding assistant only) ──
-                if (activeSession?.isCodingAssistant == true &&
-                    !activeSession!!.pendingChanges.isNullOrEmpty()) {
-                    val changeCount = activeSession!!.pendingChanges.orEmpty().size
+                val sessionForChanges = activeSession
+                if (sessionForChanges?.isCodingAssistant == true &&
+                    !sessionForChanges.pendingChanges.isNullOrEmpty()) {
+                    val changeCount = sessionForChanges.pendingChanges.size
                     Button(
                         onClick = {
                             viewModel.toggleChatSettings()

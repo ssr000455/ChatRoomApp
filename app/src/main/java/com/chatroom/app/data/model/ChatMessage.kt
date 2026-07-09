@@ -15,12 +15,14 @@ data class ChatMessage(
     val fileChanges: List<FileChangeSummary> = emptyList()
 ) {
     /**
-     * Sanitize after Gson deserialization: null lists -> empty lists.
+     * Sanitize after Gson deserialization: null lists -> empty lists, null Strings -> defaults.
      */
     fun sanitize(): ChatMessage = copy(
-        attachments = attachments ?: emptyList(),
-        terminalCommands = terminalCommands ?: emptyList(),
-        fileChanges = fileChanges ?: emptyList()
+        attachments = (attachments ?: emptyList()).map { it.sanitize() },
+        terminalCommands = (terminalCommands ?: emptyList()).map { it.sanitize() },
+        fileChanges = fileChanges ?: emptyList(),
+        role = role ?: "assistant",
+        content = content ?: ""
     )
 }
 
@@ -29,7 +31,13 @@ data class Attachment(
     val type: String,  // "image", "file", "url"
     val url: String,
     val size: Long = 0
-)
+) {
+    fun sanitize(): Attachment = copy(
+        name = name ?: "",
+        type = type ?: "",
+        url = url ?: ""
+    )
+}
 
 data class ChatRequest(
     val model: String = "gpt-4o",
@@ -76,7 +84,13 @@ data class TerminalCommand(
     val output: String,
     val exitCode: Int,
     val workingDirectory: String = ""
-)
+) {
+    fun sanitize(): TerminalCommand = copy(
+        command = command ?: "",
+        output = output ?: "",
+        workingDirectory = workingDirectory ?: ""
+    )
+}
 
 // Summary of file changes by AI
 data class FileChangeSummary(

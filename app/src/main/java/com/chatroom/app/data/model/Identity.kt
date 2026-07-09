@@ -16,6 +16,18 @@ data class Identity(
     val isActive: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 ) {
+    fun sanitize(): Identity = copy(
+        name = name ?: "Unknown",
+        description = description ?: "",
+        avatarEmoji = avatarEmoji ?: "\uD83D\uDE0A",
+        photoUri = photoUri ?: "",
+        photoData = photoData ?: "",
+        personality = personality ?: "",
+        knowledge = knowledge ?: "",
+        tone = tone ?: "",
+        extraNotes = extraNotes ?: ""
+    )
+
     fun toSystemPrompt(): String {
         val parts = mutableListOf<String>()
         if (name.isNotBlank()) parts.add("You are $name.")

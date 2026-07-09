@@ -26,14 +26,14 @@ class UserProfileRepository(private val context: Context) {
     val profiles: Flow<List<UserProfile>> = context.userProfileDataStore.data.map { prefs ->
         val json = prefs[LIST_KEY] ?: "[]"
         val type = object : TypeToken<List<UserProfile>>() {}.type
-        gson.fromJson(json, type)
+        gson.fromJson<List<UserProfile>>(json, type).map { it.sanitize() }
     }
 
     val activeProfile: Flow<UserProfile?> = context.userProfileDataStore.data.map { prefs ->
         val activeId = prefs[ACTIVE_ID_KEY] ?: return@map null
         val json = prefs[LIST_KEY] ?: "[]"
         val type = object : TypeToken<List<UserProfile>>() {}.type
-        val list: List<UserProfile> = gson.fromJson(json, type)
+        val list: List<UserProfile> = gson.fromJson(json, type).map { it.sanitize() }
         list.find { it.id == activeId }
     }
 

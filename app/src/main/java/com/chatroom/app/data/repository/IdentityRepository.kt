@@ -26,14 +26,14 @@ class IdentityRepository(private val context: Context) {
     val identities: Flow<List<Identity>> = context.identityDataStore.data.map { prefs ->
         val json = prefs[LIST_KEY] ?: "[]"
         val type = object : TypeToken<List<Identity>>() {}.type
-        gson.fromJson(json, type)
+        gson.fromJson<List<Identity>>(json, type).map { it.sanitize() }
     }
 
     val activeIdentity: Flow<Identity?> = context.identityDataStore.data.map { prefs ->
         val activeId = prefs[ACTIVE_ID_KEY] ?: return@map null
         val json = prefs[LIST_KEY] ?: "[]"
         val type = object : TypeToken<List<Identity>>() {}.type
-        val list: List<Identity> = gson.fromJson(json, type)
+        val list: List<Identity> = gson.fromJson(json, type).map { it.sanitize() }
         list.find { it.id == activeId }
     }
 
