@@ -130,15 +130,6 @@ fun RepoBrowserScreen(
     var selectedFile by remember { mutableStateOf<File?>(null) }
     var fileContent by remember { mutableStateOf<String?>(null) }
 
-    // Check if already cloned
-    fun checkCloned() {
-        if (repoDir.exists() && repoDir.listFiles()?.isNotEmpty() == true) {
-            isCloned = true
-            currentDir = repoDir
-            refreshFiles(repoDir) { files = it }
-        }
-    }
-
     // Refresh file list
     fun refreshFiles(dir: File, onResult: (List<RepoFile>) -> Unit) {
         val list = dir.listFiles()?.map { file ->
@@ -150,6 +141,15 @@ fun RepoBrowserScreen(
             )
         }?.sortedWith(compareBy({ !it.isDirectory }, { it.name })) ?: emptyList()
         onResult(list)
+    }
+
+    // Check if already cloned
+    fun checkCloned() {
+        if (repoDir.exists() && repoDir.listFiles()?.isNotEmpty() == true) {
+            isCloned = true
+            currentDir = repoDir
+            refreshFiles(repoDir) { files = it }
+        }
     }
 
     // Cancel clone
@@ -584,6 +584,7 @@ fun RepoBrowserScreen(
                 }
             }
         }
+    }
     }
 }
 

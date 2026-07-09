@@ -150,7 +150,8 @@ class TerminalSession(
             val buffer = StringBuilder()
 
             while (true) {
-                val line = reader.readLine() ?: run {
+                val line = reader.readLine()
+                if (line == null) {
                     // Process died
                     if (shellProcess?.isAlive != true) restart()
                     break

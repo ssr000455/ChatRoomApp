@@ -623,7 +623,7 @@ private fun ConnectRepoStep(
                 singleLine = true,
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Default.VpnKey,
+                        imageVector = Icons.Default.Link,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp)
                     )
