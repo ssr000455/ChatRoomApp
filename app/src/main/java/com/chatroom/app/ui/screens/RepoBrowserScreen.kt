@@ -29,6 +29,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -52,19 +53,30 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.chatroom.app.data.model.Session
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
+import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.Settings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Surface
 import androidx.compose.ui.viewinterop.AndroidView
+import com.chatroom.app.data.model.Session
+import com.chatroom.app.terminal.ExtensionPackage
+import com.chatroom.app.terminal.ToolchainInstaller
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 enum class RepoViewMode { LOCAL, ONLINE }
 
@@ -120,6 +132,45 @@ fun RepoBrowserScreen(
     var cloneError by remember { mutableStateOf<String?>(null) }
     var isCloned by remember { mutableStateOf(false) }
     var cloneProcess by remember { mutableStateOf<Process?>(null) }
+    var gitAvailable by remember { mutableStateOf(true) }
+    var checkingGit by remember { mutableStateOf(true) }
+
+    // Permission launcher for Android 11+ MANAGE_EXTERNAL_STORAGE
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { }
+
+    // Check git availability on startup (check both system PATH and app's toolchain bin)
+    LaunchedEffect(Unit) {
+        checkingGit = true
+        gitAvailable = checkGitAvailable()
+        checkingGit = false
+    }
+
+    // Check git in system PATH and app's tools/bin directory
+    fun checkGitAvailable(): Boolean {
+        val toolsBin = context.filesDir.resolve("tools/bin")
+        val paths = listOf(
+            toolsBin.absolutePath,    // App's bundled tools
+        )
+        val extraPath = paths.filter { it.isNotEmpty() }.joinToString(":")
+        return try {
+            val pb = ProcessBuilder()
+                .command("sh", "-c", "command -v git")
+                .redirectErrorStream(true)
+            if (extraPath.isNotEmpty()) {
+                val env = pb.environment()
+                val oldPath = env["PATH"] ?: "/system/bin:/system/xbin"
+                env["PATH"] = "$extraPath:$oldPath"
+            }
+            val proc = pb.start()
+            val output = proc.inputStream.bufferedReader().readText().trim()
+            val exit = proc.waitFor()
+            exit == 0 && output.isNotBlank()
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     // View mode toggle
     var viewMode by remember { mutableStateOf(RepoViewMode.LOCAL) }
@@ -129,6 +180,14 @@ fun RepoBrowserScreen(
     var files by remember { mutableStateOf<List<RepoFile>>(emptyList()) }
     var selectedFile by remember { mutableStateOf<File?>(null) }
     var fileContent by remember { mutableStateOf<String?>(null) }
+
+    // Extension package manager state
+    val toolchainInstaller = remember { ToolchainInstaller(context.filesDir) }
+    val availablePackages = remember { ToolchainInstaller.getAvailablePackages() }
+    var installingPkg by remember { mutableStateOf<String?>(null) }
+    var installProgress by remember { mutableStateOf("") }
+    var showPackageManager by remember { mutableStateOf(false) }
+    var busyboxStatus by remember { mutableStateOf(Triple(false, false, "")) } // (checked, installed, arch)
 
     // Refresh file list
     fun refreshFiles(dir: File, onResult: (List<RepoFile>) -> Unit) {
@@ -164,36 +223,99 @@ fun RepoBrowserScreen(
     // Start clone (cancelable)
     fun startClone() {
         if (repoUrl.isBlank()) return
+
+        // Check git availability
+        if (!gitAvailable) {
+            cloneError = "Git not found.\n\n请下载 git 静态二进制文件放到以下目录:\n${context.filesDir.resolve("tools/bin").absolutePath}\n\n或使用「在线」模式浏览仓库。"
+            return
+        }
+
         val authUrl = getAuthUrl()
+
+        // Use internal storage to avoid permission issues on Android 10+
+        val targetDir = if (localPath.isNotBlank()) {
+            // External path - might need permissions
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                if (!Environment.isExternalStorageManager()) {
+                    cloneError = "需要存储权限才能在外部存储中克隆。\n请在设置中授予「管理所有文件」权限。\n将打开设置页面，请允许后重试。"
+                    // Open settings for MANAGE_EXTERNAL_STORAGE
+                    try {
+                        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                            data = Uri.parse("package:${context.packageName}")
+                        }
+                        storagePermissionLauncher.launch(intent)
+                    } catch (_: Exception) {
+                        try {
+                            val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                            storagePermissionLauncher.launch(intent)
+                        } catch (_: Exception) {}
+                    }
+                    return
+                }
+            }
+            File(localPath, repoName)
+        } else {
+            context.filesDir.resolve("repos").resolve(repoName)
+        }
+
         scope.launch {
             isCloning = true
             cloneProgress = "正在克隆 $repoUrl ..."
             cloneError = null
 
             try {
-                repoDir.parentFile?.mkdirs()
+                // Ensure parent dir exists with proper permissions
+                targetDir.parentFile?.let { parent ->
+                    parent.mkdirs()
+                    // Try to set executable permission on directories
+                    try {
+                        parent.setExecutable(true, false)
+                    } catch (_: Exception) {}
+                }
+
                 // Clean existing if any
-                if (repoDir.exists()) {
-                    repoDir.deleteRecursively()
+                if (targetDir.exists()) {
+                    targetDir.deleteRecursively()
                 }
 
                 val result = withContext(Dispatchers.IO) {
-                    val proc = ProcessBuilder()
-                        .command("git", "clone", "--depth", "1", authUrl, repoDir.absolutePath)
+                    val pb = ProcessBuilder()
+                        .command("git", "clone", "--depth", "1", authUrl, targetDir.absolutePath)
                         .redirectErrorStream(true)
-                        .start()
+                    // Add app's tools bin directory to PATH for bundled git
+                    val toolsBin = context.filesDir.resolve("tools/bin")
+                    if (toolsBin.isDirectory) {
+                        val env = pb.environment()
+                        val oldPath = env["PATH"] ?: "/system/bin:/system/xbin"
+                        env["PATH"] = "${toolsBin.absolutePath}:$oldPath"
+                    }
+                    val proc = pb.start()
 
                     cloneProcess = proc
 
                     // Read output in chunks for real-time progress
                     val reader = proc.inputStream.bufferedReader()
                     val output = StringBuilder()
+                    // Use a timeout: if no output for 30s, consider it stuck
+                    val startTime = System.currentTimeMillis()
+                    val timeout = 60000L
                     while (isActive) {
-                        val line = reader.readLine() ?: break
-                        output.appendLine(line)
-                        // Update progress for long clones
-                        if (line.isNotBlank()) {
-                            cloneProgress = line
+                        if (reader.ready()) {
+                            val line = reader.readLine()
+                            if (line == null) break
+                            output.appendLine(line)
+                            if (line.isNotBlank()) {
+                                cloneProgress = line
+                            }
+                        } else {
+                            // Check timeout
+                            if (System.currentTimeMillis() - startTime > timeout) {
+                                proc.destroy()
+                                output.appendLine("\n[克隆超时 - 60秒无响应]")
+                                break
+                            }
+                            // Small delay to avoid busy-waiting
+                            delay(100)
                         }
                     }
                     val exitCode = proc.waitFor()
@@ -204,8 +326,8 @@ fun RepoBrowserScreen(
                 if (result.first == 0) {
                     cloneProgress = "克隆完成"
                     isCloned = true
-                    currentDir = repoDir
-                    refreshFiles(repoDir) { files = it }
+                    currentDir = targetDir
+                    refreshFiles(targetDir) { files = it }
                 } else {
                     cloneError = "克隆失败:\n${result.second}"
                     cloneProgress = ""
@@ -215,7 +337,14 @@ fun RepoBrowserScreen(
                 if (cloneProcess == null && !isCloning) {
                     // Canceled, don't show error
                 } else {
-                    cloneError = "克隆失败: ${e.message}"
+                    val msg = e.message ?: "未知错误"
+                    cloneError = when {
+                        msg.contains("Permission denied") || msg.contains("权限") ->
+                            "克隆失败: 权限被拒绝\n\n请尝试:\n1. 使用内部存储路径（不设置本地路径）\n2. 确保存储权限已授予"
+                        msg.contains("No such file") || msg.contains("Cannot run") ->
+                            "克隆失败: git命令未找到\n\n请将 git 静态二进制文件放到:\n${context.filesDir.resolve("tools/bin").absolutePath}"
+                        else -> "克隆失败: $msg"
+                    }
                     cloneProgress = ""
                 }
             } finally {
@@ -228,8 +357,18 @@ fun RepoBrowserScreen(
     // Auto-start clone and check on first composition
     LaunchedEffect(repoName, localPath) {
         checkCloned()
-        if (!isCloned && repoUrl.isNotBlank() && !isCloning && repoDir.parentFile?.exists() != false) {
-            startClone()
+        if (!isCloned && repoUrl.isNotBlank() && !isCloning && !checkingGit && gitAvailable) {
+            // Use the same internal storage path logic
+            val autoTargetDir = if (localPath.isNotBlank()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
+                    null // Skip auto-clone if no permission for external storage
+                } else File(localPath, repoName)
+            } else {
+                context.filesDir.resolve("repos").resolve(repoName)
+            }
+            if (autoTargetDir != null && autoTargetDir.parentFile?.exists() != false) {
+                startClone()
+            }
         }
     }
 
@@ -425,6 +564,189 @@ fun RepoBrowserScreen(
             }
         }
 
+        // ── Extension Package Manager ──
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showPackageManager = !showPackageManager }
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (showPackageManager) Icons.Default.FolderOpen else Icons.Default.Download,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "扩展工具包",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            // Show count of installed packages
+            val installedCount = availablePackages.count { pkg -> toolchainInstaller.isPackageInstalled(pkg) }
+            Text(
+                text = "$installedCount/${availablePackages.size} 已安装",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        if (showPackageManager) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    // Architecture info
+                    Text(
+                        text = "设备架构: ${toolchainInstaller.archSuffix()}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // BusyBox install button (prerequisite)
+                    val bbInstalled = toolchainInstaller.isBusyboxInstalled()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "BusyBox (基础工具包)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = if (bbInstalled) "已安装" else "提供 sh、ls、cp、wget 等 100+ 命令",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (bbInstalled) MaterialTheme.colorScheme.primary
+                                       else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (!bbInstalled) {
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        installingPkg = "BusyBox"
+                                        installProgress = ""
+                                        toolchainInstaller.installBusybox { msg ->
+                                            installProgress = msg
+                                        }
+                                        installingPkg = null
+                                        // Re-check git after busybox (provides wget)
+                                        gitAvailable = checkGitAvailable()
+                                    }
+                                },
+                                enabled = installingPkg == null,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Text("安装", style = MaterialTheme.typography.labelSmall)
+                            }
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.FolderOpen,
+                                contentDescription = "已安装",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    if (bbInstalled) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                        // Package list
+                        availablePackages.forEach { pkg ->
+                            val isInstalled = toolchainInstaller.isPackageInstalled(pkg)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "${pkg.displayName} ${pkg.version}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = if (isInstalled) "已安装"
+                                               else pkg.description + " | " + toolchainInstaller.archSuffix(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (isInstalled) MaterialTheme.colorScheme.primary
+                                               else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (!isInstalled) {
+                                    Button(
+                                        onClick = {
+                                            scope.launch {
+                                                installingPkg = pkg.displayName
+                                                installProgress = ""
+                                                toolchainInstaller.installPackage(pkg) { msg ->
+                                                    installProgress = msg
+                                                }
+                                                installingPkg = null
+                                                // Re-check git after install
+                                                if (pkg.name == "git") {
+                                                    gitAvailable = checkGitAvailable()
+                                                }
+                                            }
+                                        },
+                                        enabled = installingPkg == null,
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.height(32.dp)
+                                    ) {
+                                        Text("安装", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                } else {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Default.FolderOpen,
+                                        contentDescription = "已安装",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Install progress
+                    if (installingPkg != null || installProgress.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        if (installingPkg != null) {
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        }
+                        if (installProgress.isNotBlank()) {
+                            Text(
+                                text = installProgress,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
         // Content
         if (viewMode == RepoViewMode.ONLINE && repoUrl.isNotBlank()) {
             // Online web view
@@ -481,11 +803,38 @@ fun RepoBrowserScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
+                        // Show git not available warning
+                        if (!gitAvailable && !checkingGit) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = "Git not available",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "未找到 git 命令。将静态 git 二进制文件放到 tools/bin 目录，或使用「在线」模式。",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
                         Spacer(modifier = Modifier.height(24.dp))
 
                         Button(
                             onClick = { startClone() },
-                            enabled = repoUrl.isNotBlank(),
+                            enabled = repoUrl.isNotBlank() && gitAvailable,
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier
                                 .fillMaxWidth()

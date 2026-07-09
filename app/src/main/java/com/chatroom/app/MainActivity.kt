@@ -110,7 +110,7 @@ private fun ChatRoomAppContent(
     LaunchedEffect(sessions) {
         sessions.filter { it.isCodingAssistant }.forEach { session ->
             if (!terminalSessions.containsKey(session.id)) {
-                val ts = TerminalSession("Terminal-${session.id}")
+                val ts = TerminalSession(context, "Terminal-${session.id}")
                 // Use app sandbox for terminal (exec permission required)
                 val workDir = if (session.repoName.isNotBlank()) {
                     context.filesDir.resolve("workspace").resolve(session.repoName).absolutePath
@@ -118,6 +118,12 @@ private fun ChatRoomAppContent(
                     context.filesDir.resolve("workspace").absolutePath
                 }
                 ts.start(workDir)
+                // Initialize toolchain (BusyBox etc.) in background
+                kotlinx.coroutines.GlobalScope.launch {
+                    ts.initToolchain { progress ->
+                        android.util.Log.d("Toolchain", progress)
+                    }
+                }
                 terminalSessions[session.id] = ts
             }
         }
