@@ -269,6 +269,7 @@ private fun ApiAccountCard(
     onDelete: () -> Unit
 ) {
     var showKey by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val bg = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
              else MaterialTheme.colorScheme.surface
@@ -367,8 +368,7 @@ private fun ApiAccountCard(
             )
             IconButton(
                 onClick = {
-                    val ctx = androidx.compose.ui.platform.LocalContext.current
-                    val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
                     clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("API Key", account.apiKey))
                 },
                 modifier = Modifier.size(28.dp)
