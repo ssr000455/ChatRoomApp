@@ -67,8 +67,8 @@ class TerminalSession(
             override fun onCopyTextToClipboard(session: com.termux.terminal.TerminalSession, text: String) {}
             override fun onPasteTextFromClipboard(session: com.termux.terminal.TerminalSession) {}
             override fun onSessionFinished(session: com.termux.terminal.TerminalSession) {}
-            override fun setTerminalShellPid(session: com.termux.terminal.TerminalSession, pid: Int) {}
             override fun onTerminalCursorStateChange(state: Boolean) {}
+            override fun getTerminalCursorStyle(): Int = 0
             override fun logError(errorTag: String, message: String) { Log.e(errorTag, message) }
         }
 
