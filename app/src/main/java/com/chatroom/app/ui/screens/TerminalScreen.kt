@@ -182,6 +182,28 @@ fun TerminalScreen(
                 AndroidView(
                     factory = { ctx ->
                         com.termux.view.TerminalView(ctx, null).apply {
+                            setTextSize(12)
+                            setTerminalViewClient(object : com.termux.view.TerminalViewClient {
+                                override fun onSingleTapUp(e: android.view.MotionEvent?): Boolean = false
+                                override fun onScale(scale: Float): Float = scale
+                                override fun onLongPress(e: android.view.MotionEvent?): Boolean = false
+                                override fun isTerminalViewSelected(): Boolean = true
+                                override fun shouldEnforceCharBasedInput(): Boolean = false
+                                override fun shouldBackButtonBeMappedToEscape(): Boolean = false
+                                override fun shouldUseCtrlSpaceWorkaround(): Boolean = false
+                                override fun readControlKey(): Boolean = false
+                                override fun readAltKey(): Boolean = false
+                                override fun readShiftKey(): Boolean = false
+                                override fun readFnKey(): Boolean = false
+                                override fun onKeyDown(keyCode: Int, e: android.view.KeyEvent?, session: com.termux.terminal.TerminalSession?): Boolean = false
+                                override fun onKeyUp(keyCode: Int, e: android.view.KeyEvent?): Boolean = false
+                                override fun onCodePoint(codePoint: Int, controlDown: Boolean, session: com.termux.terminal.TerminalSession?): Boolean = false
+                                override fun onEmulatorSet() {}
+                                override fun copyModeChanged(isCopyMode: Boolean) {}
+                                override fun logInfo(tag: String?, message: String?) { android.util.Log.i(tag ?: "TerminalView", message ?: "") }
+                                override fun logError(tag: String?, message: String?) { android.util.Log.e(tag ?: "TerminalView", message ?: "") }
+                                override fun logVerbose(tag: String?, message: String?) { android.util.Log.v(tag ?: "TerminalView", message ?: "") }
+                            })
                             val session = terminalSession.getOrCreateSession()
                             attachSession(session)
                             isFocusable = true
