@@ -205,6 +205,8 @@ fun TerminalScreen(
                                 override fun logWarn(tag: String?, message: String?) { android.util.Log.w(tag ?: "TerminalView", message ?: "") }
                                 override fun logDebug(tag: String?, message: String?) { android.util.Log.d(tag ?: "TerminalView", message ?: "") }
                                 override fun logVerbose(tag: String?, message: String?) { android.util.Log.v(tag ?: "TerminalView", message ?: "") }
+                                override fun logStackTraceWithMessage(tag: String?, message: String?, e: java.lang.Exception?) { android.util.Log.e(tag ?: "TerminalView", message ?: "", e) }
+                                override fun logStackTrace(tag: String?, e: java.lang.Exception?) { android.util.Log.e(tag ?: "TerminalView", "", e) }
                             })
                             val session = terminalSession.getOrCreateSession()
                             attachSession(session)
