@@ -113,7 +113,7 @@ fun TerminalScreen(
                 IconButton(
                     onClick = {
                         // Send Ctrl+L (form feed) to clear terminal screen
-                        terminalSession.getOrCreateSession().write("\u000C")
+                        terminalSession.getOrCreateSession().write("\u000C".toByteArray(), 0, 1)
                     },
                     modifier = Modifier.size(36.dp)
                 ) {

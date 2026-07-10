@@ -25,10 +25,8 @@ class TerminalSession(
     private val _installProgress = MutableStateFlow("")
     val installProgress: StateFlow<String> = _installProgress.asStateFlow()
 
-    // The actual Termux terminal session (created lazily)
     private var termuxSession: com.termux.terminal.TerminalSession? = null
 
-    // Toolchain manager for optional BusyBox shell
     private val toolchain = ToolchainInstaller(context.filesDir)
 
     fun start(workingDir: String = File.separator) {
@@ -39,9 +37,6 @@ class TerminalSession(
         Log.d(tag, "Terminal session initialized at $workingDir, ready=${_isReady.value}")
     }
 
-    /**
-     * Create or return the existing Termux TerminalSession.
-     */
     fun getOrCreateSession(): com.termux.terminal.TerminalSession {
         termuxSession?.let { return it }
 
@@ -65,28 +60,25 @@ class TerminalSession(
         )
 
         val client = object : com.termux.terminal.TerminalSessionClient {
-            override fun onTitleChanged(session: com.termux.terminal.TerminalSession, title: String) {}
-            override fun onSessionInformationChanged(session: com.termux.terminal.TerminalSession, info: String) {}
+            override fun onTitleChanged(session: com.termux.terminal.TerminalSession) {}
+            override fun onTextChanged(session: com.termux.terminal.TerminalSession) {}
             override fun onBell(session: com.termux.terminal.TerminalSession) {}
             override fun onColorsChanged(session: com.termux.terminal.TerminalSession) {}
-            override fun onTerminalSessionStateChanged(session: com.termux.terminal.TerminalSession) {}
-            override fun logError(tag: String, message: String) = Log.e(tag, message)
-            override fun logOutput(data: ByteArray, offset: Int, count: Int) {}
-            override fun onLineFeed(session: com.termux.terminal.TerminalSession) {}
+            override fun onCopyTextToClipboard(session: com.termux.terminal.TerminalSession, text: String) {}
+            override fun onPasteTextFromClipboard(session: com.termux.terminal.TerminalSession) {}
+            override fun onSessionFinished(session: com.termux.terminal.TerminalSession) {}
+            override fun setTerminalShellPid(session: com.termux.terminal.TerminalSession, pid: Int) {}
+            override fun logError(errorTag: String, message: String) { Log.e(errorTag, message) }
         }
 
         val session = com.termux.terminal.TerminalSession(
-            shellPath, _workingDirectory, env, 1000, client
+            shellPath, _workingDirectory, null, env, 1000, client
         )
-        session.initializeEmulator(80, 24)
         termuxSession = session
         Log.d(tag, "Termux session created: shell=$shellPath")
         return session
     }
 
-    /**
-     * Install toolchain (BusyBox) in background, called from TerminalScreen
-     */
     suspend fun installToolchain(onProgress: (String) -> Unit = {}): Boolean {
         if (toolchain.isBusyboxInstalled()) {
             withContext(Dispatchers.Main) { _isReady.value = true }
@@ -103,6 +95,7 @@ class TerminalSession(
     }
 
     fun stop() {
+        termuxSession?.finishIfRunning()
         termuxSession = null
         _isRunning.value = false
         Log.d(tag, "Terminal session stopped")
