@@ -240,7 +240,7 @@ private fun AddApiAccountForm(
         Button(
             onClick = {
                 onSave(ApiAccount(
-                    id = existingAccount?.id ?: "",
+                    id = existingAccount?.id ?: java.util.UUID.randomUUID().toString(),
                     name = name,
                     apiKey = apiKey,
                     apiBaseUrl = apiBaseUrl,
@@ -321,7 +321,8 @@ private fun ApiAccountCard(
                         text = if (showKey) account.apiKey else account.apiKey.take(8) + "••••••••",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f)
                     )
                     IconButton(
                         onClick = { showKey = !showKey },
@@ -354,10 +355,31 @@ private fun ApiAccountCard(
             }
         }
         Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = account.apiBaseUrl,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = account.apiBaseUrl,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(
+                onClick = {
+                    val ctx = androidx.compose.ui.platform.LocalContext.current
+                    val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                    clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("API Key", account.apiKey))
+                },
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy API Key",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
     }
 }
