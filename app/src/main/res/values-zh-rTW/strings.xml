@@ -169,10 +169,7 @@
 
     <!-- Terminal -->
     <string name="terminal_title">終端機</string>
-    <string name="terminal_input_hint">$ 輸入指令…</string>
     <string name="terminal_clear">清屏</string>
-    <string name="terminal_new">新建會話</string>
-    <string name="terminal_copy">複製輸出</string>
 
     <!-- Repo Browser -->
     <string name="repo_browser_title">倉庫</string>
@@ -204,9 +201,6 @@
 
     <!-- File Changes -->
     <string name="file_changes">檔案更改</string>
-
-    <!-- Terminal Commands -->
-    <string name="terminal_exit_code">退出碼：%d</string>
 
     <!-- Chat Settings -->
     <string name="chat_settings">聊天設定</string>
@@ -250,11 +244,7 @@
     <string name="repo_online_mode">線上模式</string>
 
     <!-- Terminal -->
-    <string name="terminal_welcome">ChatRoom 終端機 - 程式碼倉庫存取</string>
-    <string name="terminal_help_hint">輸入 help 檢視可用指令。按 Enter 執行。</string>
-    <string name="terminal_install_hint">安裝工具：pkg install git curl wget tree nano vim</string>
     <string name="terminal_close">關閉終端機</string>
-    <string name="terminal_execute">執行</string>
 
     <!-- Coding Assistant Wizard -->
     <string name="wizard_customize_hint">自訂程式碼助手的行為。後續可以修改。</string>
@@ -287,7 +277,7 @@
     <string name="settings_select_backup">選擇備份檔案</string>
 
     <!-- Terminal -->
-    <string name="terminal_running">運行中\u2026</string>
+    <string name="terminal_installing_toolchain">正在安裝終端環境\u2026</string>
 
     <!-- Content Descriptions -->
     <string name="content_desc_menu">選單</string>

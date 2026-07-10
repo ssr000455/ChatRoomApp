@@ -169,10 +169,7 @@
 
     <!-- Terminal -->
     <string name="terminal_title">终端</string>
-    <string name="terminal_input_hint">$ 输入命令…</string>
     <string name="terminal_clear">清屏</string>
-    <string name="terminal_new">新建会话</string>
-    <string name="terminal_copy">复制输出</string>
 
     <!-- Repo Browser -->
     <string name="repo_browser_title">仓库</string>
@@ -204,9 +201,6 @@
 
     <!-- File Changes -->
     <string name="file_changes">文件更改</string>
-
-    <!-- Terminal Commands -->
-    <string name="terminal_exit_code">退出码：%d</string>
 
     <!-- Chat Settings -->
     <string name="chat_settings">聊天设置</string>
@@ -250,11 +244,7 @@
     <string name="repo_online_mode">在线模式</string>
 
     <!-- Terminal -->
-    <string name="terminal_welcome">ChatRoom 终端 - 代码仓库访问</string>
-    <string name="terminal_help_hint">输入 help 查看可用命令。按 Enter 执行。</string>
-    <string name="terminal_install_hint">安装工具：pkg install git curl wget tree nano vim</string>
     <string name="terminal_close">关闭终端</string>
-    <string name="terminal_execute">执行</string>
 
     <!-- Coding Assistant Wizard -->
     <string name="wizard_customize_hint">自定义编程助手的行为。后续可以修改。</string>
@@ -287,7 +277,7 @@
     <string name="settings_select_backup">选择备份文件</string>
 
     <!-- Terminal -->
-    <string name="terminal_running">运行中\u2026</string>
+    <string name="terminal_installing_toolchain">正在安装终端环境\u2026</string>
 
     <!-- Content Descriptions -->
     <string name="content_desc_menu">菜单</string>

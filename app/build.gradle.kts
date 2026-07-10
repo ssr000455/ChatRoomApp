@@ -95,6 +95,9 @@ dependencies {
     // Image loading
     implementation("io.coil-kt:coil-compose:2.5.0")
 
+    // Terminal emulation (Termux TerminalView - embedded, not external APK)
+    implementation("com.termux:termux-terminal-view:0.4.0")
+
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

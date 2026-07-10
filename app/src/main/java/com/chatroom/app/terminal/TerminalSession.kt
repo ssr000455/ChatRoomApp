@@ -9,14 +9,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
 
-data class CommandEntry(
-    val command: String,
-    val output: String,
-    val workingDirectory: String,
-    val exitCode: Int,
-    val timestamp: Long = System.currentTimeMillis()
-)
-
 class TerminalSession(
     private val context: Context,
     private val tag: String = "TerminalSession"
@@ -24,210 +16,89 @@ class TerminalSession(
     private var _workingDirectory: String = File.separator
     val workingDirectory: String get() = _workingDirectory
 
-    private val _history = MutableStateFlow<List<CommandEntry>>(emptyList())
-    val history: StateFlow<List<CommandEntry>> = _history.asStateFlow()
-
     private val _isRunning = MutableStateFlow(false)
     val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
 
-    private val _currentOutput = MutableStateFlow("")
-    val currentOutput: StateFlow<String> = _currentOutput.asStateFlow()
+    private val _isReady = MutableStateFlow(false)
+    val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
 
-    // Toolchain manager and shell environment
+    private val _installProgress = MutableStateFlow("")
+    val installProgress: StateFlow<String> = _installProgress.asStateFlow()
+
+    // The actual Termux terminal session (created lazily)
+    private var termuxSession: com.termux.terminal.TerminalSession? = null
+
+    // Toolchain manager for optional BusyBox shell
     private val toolchain = ToolchainInstaller(context.filesDir)
-    private var shellPath: String = "sh"
-    private var extraPath: String = ""
 
     fun start(workingDir: String = File.separator) {
         _workingDirectory = workingDir
         _isRunning.value = false
-
-        // Initialize toolchain: use BusyBox if available, fall back to system sh
-        val status = toolchain.checkStatus()
-        if (status.hasBusybox) {
-            shellPath = status.shellPath
-            extraPath = status.binDir
-            Log.d(tag, "Using BusyBox shell: $shellPath")
-        } else {
-            shellPath = "sh"
-            extraPath = ""
-            Log.d(tag, "Using system shell: sh")
-        }
-
-        // Ensure workspace dir exists
+        _isReady.value = toolchain.isBusyboxInstalled()
         try { File(workingDir).mkdirs() } catch (_: Exception) {}
-        Log.d(tag, "Terminal session started at $workingDir")
+        Log.d(tag, "Terminal session initialized at $workingDir, ready=${_isReady.value}")
     }
 
     /**
-     * Initialize toolchain (download BusyBox etc.). Call this from a coroutine.
+     * Create or return the existing Termux TerminalSession
      */
-    suspend fun initToolchain(onProgress: (String) -> Unit = {}): Boolean {
-        val ok = toolchain.installBusybox(onProgress)
+    fun getOrCreateSession(): com.termux.terminal.TerminalSession {
+        termuxSession?.let { return it }
+
+        val shellPath = if (toolchain.isBusyboxInstalled()) {
+            toolchain.binDir.resolve("sh").absolutePath
+        } else {
+            "/system/bin/sh"
+        }
+
+        val pathEnv = if (toolchain.isBusyboxInstalled()) {
+            "${toolchain.binDir.absolutePath}:/system/bin:/system/xbin"
+        } else {
+            "/system/bin:/system/xbin"
+        }
+
+        val env = arrayOf(
+            "TERM=xterm-256color",
+            "HOME=${toolchain.toolsHome.absolutePath}",
+            "PATH=$pathEnv",
+            "SHELL=$shellPath"
+        )
+
+        val session = com.termux.terminal.TerminalSession(
+            shellPath, null, _workingDirectory, env, null
+        )
+        session.initializeEmulator(80, 24)
+        termuxSession = session
+        Log.d(tag, "Termux session created: shell=$shellPath")
+        return session
+    }
+
+    /**
+     * Install toolchain (BusyBox) in background, called from TerminalScreen
+     */
+    suspend fun installToolchain(onProgress: (String) -> Unit = {}): Boolean {
+        if (toolchain.isBusyboxInstalled()) {
+            withContext(Dispatchers.Main) { _isReady.value = true }
+            return true
+        }
+        val ok = toolchain.installBusybox { msg ->
+            withContext(Dispatchers.Main) {
+                _installProgress.value = msg
+                onProgress(msg)
+            }
+        }
         if (ok) {
-            shellPath = toolchain.binDir.resolve("sh").absolutePath
-            extraPath = toolchain.binDir.absolutePath
+            withContext(Dispatchers.Main) { _isReady.value = true }
         }
         return ok
     }
 
-    fun isBusyboxInstalled(): Boolean = toolchain.isBusyboxInstalled()
-
-    private fun buildProcess(command: String): ProcessBuilder {
-        val pb = ProcessBuilder(shellPath, "-c", command)
-            .directory(File(_workingDirectory))
-            .redirectErrorStream(true)
-        // Set PATH: toolchain bin first (if available), then system paths
-        val env = pb.environment()
-        env["PATH"] = if (extraPath.isNotEmpty()) {
-            "$extraPath:/system/bin:/system/xbin"
-        } else {
-            "/system/bin:/system/xbin"
-        }
-        env["HOME"] = toolchain.toolsHome.absolutePath
-        return pb
-    }
-
-    suspend fun executeCommand(command: String): Result<CommandEntry> = withContext(Dispatchers.IO) {
-        _isRunning.value = true
-        try {
-            val trimmed = command.trim()
-            if (trimmed.isEmpty()) {
-                return@withContext Result.success(
-                    CommandEntry("", "", _workingDirectory, 0)
-                )
-            }
-
-            // Handle clear
-            if (trimmed == "clear") {
-                _history.value = emptyList()
-                _currentOutput.value = ""
-                return@withContext Result.success(
-                    CommandEntry("clear", "", _workingDirectory, 0)
-                )
-            }
-
-            // Handle cd internally
-            if (trimmed == "cd") {
-                _workingDirectory = File.separator
-                return@withContext Result.success(
-                    CommandEntry("cd", "", _workingDirectory, 0)
-                )
-            }
-            if (trimmed.startsWith("cd ")) {
-                val dir = trimmed.removePrefix("cd ").trim()
-                val newDir = if (dir.startsWith(File.separator)) {
-                    File(dir)
-                } else {
-                    File(_workingDirectory, dir)
-                }
-                val normalized = newDir.normalize()
-                if (normalized.isDirectory) {
-                    _workingDirectory = normalized.absolutePath
-                    return@withContext Result.success(
-                        CommandEntry(trimmed, "", _workingDirectory, 0)
-                    )
-                } else {
-                    val entry = CommandEntry(trimmed, "cd: $dir: No such directory", _workingDirectory, 1)
-                    _history.value = _history.value + entry
-                    _currentOutput.value = entry.output
-                    return@withContext Result.success(entry)
-                }
-            }
-
-            // Run command with timeout and proper cleanup
-            val process = buildProcess(trimmed).start()
-            var processOutput = ""
-            var processExitCode = -1
-
-            try {
-                val outputBuilder = StringBuilder()
-                val commandTimeout = 30000L
-                val startTime = System.currentTimeMillis()
-                var timedOut = false
-
-                // Read output in chunks to avoid pipe buffer deadlock.
-                // Use inputStream.available() to check for data without blocking.
-                // If the stream is closed (timeout destroy), readLine returns null.
-                while (true) {
-                    // Check timeout before each iteration
-                    if (System.currentTimeMillis() - startTime > commandTimeout) {
-                        timedOut = true
-                        process.destroyForcibly()
-                        outputBuilder.appendLine()
-                        outputBuilder.append("[Command timed out after ${commandTimeout / 1000}s]")
-                        break
-                    }
-
-                    // Check if data is available without blocking
-                    val available = try {
-                        process.inputStream.available()
-                    } catch (_: Exception) {
-                        -1
-                    }
-
-                    if (available > 0) {
-                        // Data available — read it raw, not line-by-line,
-                        // to avoid issues with buffered reader ready() on pipes
-                        val buf = ByteArray(available)
-                        val n = process.inputStream.read(buf, 0, available)
-                        if (n > 0) {
-                            @Suppress("DEPRECATION")
-                            outputBuilder.append(String(buf, 0, n, Charsets.UTF_8))
-                        }
-                    }
-
-                    // Check if process has exited
-                    try {
-                        processExitCode = process.exitValue()
-                        // Process finished — drain any remaining output
-                        try {
-                            val remainingBytes = process.inputStream.readBytes()
-                            if (remainingBytes.isNotEmpty()) {
-                                @Suppress("DEPRECATION")
-                                outputBuilder.append(String(remainingBytes, 0, remainingBytes.size, Charsets.UTF_8))
-                            }
-                        } catch (_: Exception) {}
-                        break
-                    } catch (_: IllegalThreadStateException) {
-                        // Process still running
-                    }
-
-                    // Brief sleep to avoid busy-spinning
-                    Thread.sleep(30)
-                }
-
-                processOutput = outputBuilder.toString().trimEnd()
-            } finally {
-                // Always destroy the process to avoid zombie processes
-                try { process.destroyForcibly() } catch (_: Exception) {}
-            }
-
-            _currentOutput.value = processOutput
-
-            val entry = CommandEntry(trimmed, processOutput, _workingDirectory, processExitCode)
-            _history.value = _history.value + entry
-
-            Log.d(tag, "Cmd: $trimmed, exit: $processExitCode, out len: ${processOutput.length}")
-            Result.success(entry)
-        } catch (e: Exception) {
-            Log.e(tag, "Command error: ${e.message}")
-            val entry = CommandEntry(command, "Error: ${e.message}", _workingDirectory, -1)
-            _history.value = _history.value + entry
-            _currentOutput.value = "Error: ${e.message}"
-            Result.success(entry)
-        } finally {
-            _isRunning.value = false
-        }
-    }
-
-    fun clearHistory() {
-        _history.value = emptyList()
-        _currentOutput.value = ""
-    }
-
     fun stop() {
+        termuxSession?.finish()
+        termuxSession = null
         _isRunning.value = false
         Log.d(tag, "Terminal session stopped")
     }
+
+    fun isRunning(): Boolean = termuxSession?.isRunning ?: false
 }

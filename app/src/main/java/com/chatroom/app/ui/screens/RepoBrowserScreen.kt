@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.SignalWifiStatusbar4Bar
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -73,8 +72,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.viewinterop.AndroidView
 import com.chatroom.app.R
 import com.chatroom.app.data.model.Session
-import com.chatroom.app.terminal.ExtensionPackage
-import com.chatroom.app.terminal.ToolchainInstaller
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -137,44 +134,11 @@ fun RepoBrowserScreen(
     var isCloned by remember { mutableStateOf(false) }
     var cloneProcess by remember { mutableStateOf<Process?>(null) }
     var gitAvailable by remember { mutableStateOf(true) }
-    var checkingGit by remember { mutableStateOf(true) }
 
     // Permission launcher for Android 11+ MANAGE_EXTERNAL_STORAGE
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { }
-
-    // Check git in system PATH and app's tools/bin directory
-    fun checkGitAvailable(): Boolean {
-        val toolsBin = context.filesDir.resolve("tools/bin")
-        val paths = listOf(
-            toolsBin.absolutePath,    // App's bundled tools
-        )
-        val extraPath = paths.filter { it.isNotEmpty() }.joinToString(":")
-        return try {
-            val pb = ProcessBuilder()
-                .command("sh", "-c", "command -v git")
-                .redirectErrorStream(true)
-            if (extraPath.isNotEmpty()) {
-                val env = pb.environment()
-                val oldPath = env["PATH"] ?: "/system/bin:/system/xbin"
-                env["PATH"] = "$extraPath:$oldPath"
-            }
-            val proc = pb.start()
-            val output = proc.inputStream.bufferedReader().readText().trim()
-            val exit = proc.waitFor()
-            exit == 0 && output.isNotBlank()
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    // Check git availability on startup (check both system PATH and app's toolchain bin)
-    LaunchedEffect(Unit) {
-        checkingGit = true
-        gitAvailable = withContext(Dispatchers.IO) { checkGitAvailable() }
-        checkingGit = false
-    }
 
     // View mode toggle
     var viewMode by remember { mutableStateOf(RepoViewMode.LOCAL) }
@@ -184,14 +148,6 @@ fun RepoBrowserScreen(
     var files by remember { mutableStateOf<List<RepoFile>>(emptyList()) }
     var selectedFile by remember { mutableStateOf<File?>(null) }
     var fileContent by remember { mutableStateOf<String?>(null) }
-
-    // Extension package manager state
-    val toolchainInstaller = remember { ToolchainInstaller(context.filesDir) }
-    val availablePackages = remember { ToolchainInstaller.getAvailablePackages() }
-    var installingPkg by remember { mutableStateOf<String?>(null) }
-    var installProgress by remember { mutableStateOf("") }
-    var showPackageManager by remember { mutableStateOf(false) }
-    var busyboxStatus by remember { mutableStateOf(Triple(false, false, "")) } // (checked, installed, arch)
 
     // Clone speed tracking
     var cloneSpeed by remember { mutableStateOf("") }
@@ -414,7 +370,7 @@ fun RepoBrowserScreen(
     // Auto-start clone and check on first composition
     LaunchedEffect(repoName, localPath) {
         checkCloned()
-        if (!isCloned && repoUrl.isNotBlank() && !isCloning && !checkingGit && gitAvailable) {
+        if (!isCloned && repoUrl.isNotBlank() && !isCloning && gitAvailable) {
             // Use the same internal storage path logic
             val autoTargetDir = if (localPath.isNotBlank()) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
@@ -679,195 +635,6 @@ fun RepoBrowserScreen(
             }
         }
 
-        // ── Extension Package Manager ──
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { showPackageManager = !showPackageManager }
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = if (showPackageManager) Icons.Default.FolderOpen else Icons.Default.Download,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "扩展工具包",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            // Show count of installed packages
-            val installedCount = availablePackages.count { pkg -> toolchainInstaller.isPackageInstalled(pkg) }
-            Text(
-                text = "$installedCount/${availablePackages.size} 已安装",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        if (showPackageManager) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    // Architecture info
-                    Text(
-                        text = "设备架构: ${toolchainInstaller.archSuffix()}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // BusyBox install button (prerequisite)
-                    val bbInstalled = toolchainInstaller.isBusyboxInstalled()
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "BusyBox (基础工具包)",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = if (bbInstalled) "已安装" else "提供 sh、ls、cp、wget 等 100+ 命令",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (bbInstalled) MaterialTheme.colorScheme.primary
-                                       else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        if (!bbInstalled) {
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        installingPkg = "BusyBox"
-                                        installProgress = ""
-                                        toolchainInstaller.installBusybox { msg ->
-                                            installProgress = msg
-                                        }
-                                        installingPkg = null
-                                        // Re-check git after busybox (provides wget)
-                                        gitAvailable = withContext(Dispatchers.IO) { checkGitAvailable() }
-                                    }
-                                },
-                                enabled = installingPkg == null,
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.height(32.dp)
-                            ) {
-                                Text(stringResource(R.string.repo_install), style = MaterialTheme.typography.labelSmall)
-                            }
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.FolderOpen,
-                                contentDescription = stringResource(R.string.repo_installed),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-
-                    if (bbInstalled) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(1.dp)
-                                .padding(vertical = 4.dp)
-                                .background(MaterialTheme.colorScheme.outlineVariant)
-                        )
-
-                        // Package list
-                        availablePackages.forEach { pkg ->
-                            val isInstalled = toolchainInstaller.isPackageInstalled(pkg)
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "${pkg.displayName} ${pkg.version}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = if (isInstalled) "已安装"
-                                               else pkg.description + " | " + toolchainInstaller.archSuffix(),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = if (isInstalled) MaterialTheme.colorScheme.primary
-                                               else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                if (!isInstalled) {
-                                    Button(
-                                        onClick = {
-                                            scope.launch {
-                                                installingPkg = pkg.displayName
-                                                installProgress = ""
-                                                toolchainInstaller.installPackage(pkg) { msg ->
-                                                    installProgress = msg
-                                                }
-                                                installingPkg = null
-                                                // Re-check git after install
-                                                if (pkg.name == "git") {
-                                                    gitAvailable = withContext(Dispatchers.IO) { checkGitAvailable() }
-                                                }
-                                            }
-                                        },
-                                        enabled = installingPkg == null,
-                                        shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier.height(32.dp)
-                                    ) {
-                                        Text(stringResource(R.string.repo_install), style = MaterialTheme.typography.labelSmall)
-                                    }
-                                } else {
-                                    androidx.compose.material3.Icon(
-                                        imageVector = Icons.Default.FolderOpen,
-                                        contentDescription = stringResource(R.string.repo_installed),
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Install progress
-                    if (installingPkg != null || installProgress.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        if (installingPkg != null) {
-                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                        }
-                        if (installProgress.isNotBlank()) {
-                            Text(
-                                text = installProgress,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-
         // Content
         if (viewMode == RepoViewMode.ONLINE && repoUrl.isNotBlank()) {
             // Online web view
@@ -925,7 +692,7 @@ fun RepoBrowserScreen(
                         )
 
                         // Show git not available warning
-                        if (!gitAvailable && !checkingGit) {
+                        if (!gitAvailable) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),

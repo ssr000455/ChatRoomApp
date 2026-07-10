@@ -169,10 +169,7 @@
 
     <!-- Terminal -->
     <string name="terminal_title">Terminal</string>
-    <string name="terminal_input_hint">$ enter command…</string>
     <string name="terminal_clear">Clear</string>
-    <string name="terminal_new">New Session</string>
-    <string name="terminal_copy">Copy Output</string>
 
     <!-- Repo Browser -->
     <string name="repo_browser_title">Repository</string>
@@ -204,9 +201,6 @@
 
     <!-- File Changes -->
     <string name="file_changes">File Changes</string>
-
-    <!-- Terminal Commands -->
-    <string name="terminal_exit_code">Exit code: %d</string>
 
     <!-- Chat Settings -->
     <string name="chat_settings">Chat Settings</string>
@@ -250,11 +244,7 @@
     <string name="repo_online_mode">Online Mode</string>
 
     <!-- Terminal -->
-    <string name="terminal_welcome">ChatRoom Terminal - Code Repository Access</string>
-    <string name="terminal_help_hint">Type \'help\' for available commands. Press Enter to execute.</string>
-    <string name="terminal_install_hint">Install tools: pkg install git curl wget tree nano vim</string>
     <string name="terminal_close">Close Terminal</string>
-    <string name="terminal_execute">Execute</string>
 
     <!-- Coding Assistant Wizard -->
     <string name="wizard_customize_hint">Customize how the coding assistant behaves. You can change this later.</string>
@@ -287,7 +277,7 @@
     <string name="settings_select_backup">Select Backup File</string>
 
     <!-- Terminal -->
-    <string name="terminal_running">Running\u2026</string>
+    <string name="terminal_installing_toolchain">Installing shell environment\u2026</string>
 
     <!-- Content Descriptions -->
     <string name="content_desc_menu">Menu</string>

@@ -104,32 +104,24 @@ private fun ChatRoomAppContent(
     val activeSession by chatViewModel.activeSession.collectAsState()
     val uiState by chatViewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     // Terminal sessions per coding assistant session
     val terminalSessions = remember { mutableStateMapOf<String, TerminalSession>() }
-    val terminalScope = rememberCoroutineScope()
 
     // Auto-create terminal sessions for coding assistant sessions
     LaunchedEffect(sessions) {
         sessions.filter { it.isCodingAssistant }.forEach { session ->
             if (!terminalSessions.containsKey(session.id)) {
                 val ts = TerminalSession(context, "Terminal-${session.id}")
-                // Use app sandbox for terminal (exec permission required)
                 val workDir = if (session.repoName.isNotBlank()) {
                     context.filesDir.resolve("workspace").resolve(session.repoName).absolutePath
                 } else {
                     context.filesDir.resolve("workspace").absolutePath
                 }
                 ts.start(workDir)
-                // Add to map immediately so TerminalScreen can find it
                 terminalSessions[session.id] = ts
-                // Initialize toolchain (BusyBox etc.) in background
-                // Don't block LaunchedEffect — it may get cancelled if sessions changes
-                terminalScope.launch {
-                    ts.initToolchain { progress ->
-                        android.util.Log.d("Toolchain", progress)
-                    }
-                }
+                // Toolchain auto-installs when TerminalScreen is shown
             }
         }
     }
@@ -192,9 +184,7 @@ private fun ChatRoomAppContent(
             },
             onSelectSessionMode = { sessionId, mode ->
                 val job = chatViewModel.setSessionMode(sessionId, mode)
-                // Wait for mode change to complete before navigating,
-                // so the correct screen (Terminal/RepoBrowser) is shown immediately
-                terminalScope.launch {
+                scope.launch {
                     job.join()
                     currentDestination = SidebarDestination.Main
                 }

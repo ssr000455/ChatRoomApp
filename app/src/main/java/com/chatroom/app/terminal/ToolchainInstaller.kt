@@ -259,7 +259,8 @@ class ToolchainInstaller(private val baseDir: File) {
         for (attempt in 1..maxRetries) {
             try {
                 val conn = URL(urlStr).openConnection() as HttpURLConnection
-                conn.connectTimeout = 10000
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36")
+                conn.connectTimeout = 15000
                 conn.readTimeout = 60000
                 conn.instanceFollowRedirects = true
                 try {
