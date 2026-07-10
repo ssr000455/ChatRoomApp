@@ -380,7 +380,7 @@ private fun ProfileForm(
                             .data(previewBytes)
                             .crossfade(true)
                             .build(),
-                        contentDescription = "Avatar",
+                        contentDescription = stringResource(R.string.content_desc_avatar),
                         modifier = Modifier
                             .size(80.dp)
                             .clip(CircleShape),
@@ -407,7 +407,7 @@ private fun ProfileForm(
                             .data(avatarUri)
                             .crossfade(true)
                             .build(),
-                        contentDescription = "Avatar",
+                        contentDescription = stringResource(R.string.content_desc_avatar),
                         modifier = Modifier
                             .size(80.dp)
                             .clip(CircleShape),

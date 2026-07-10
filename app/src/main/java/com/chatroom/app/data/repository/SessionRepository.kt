@@ -47,7 +47,7 @@ class SessionRepository(private val context: Context) {
 
     @Synchronized
     private fun getCachedSessions(json: String? = null): List<Session> {
-        if (cachedSessions != null) return cachedSessions!!
+        if (cachedSessions != null) return cachedSessions ?: emptyList()
         val raw = json ?: return emptyList()
         val type = object : TypeToken<List<Session>>() {}.type
         return gson.fromJson<List<Session>>(raw, type).map { it.sanitize() }.also { cachedSessions = it }

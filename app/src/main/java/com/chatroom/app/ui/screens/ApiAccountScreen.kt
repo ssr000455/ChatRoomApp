@@ -191,7 +191,7 @@ private fun AddApiAccountForm(
             value = name,
             onValueChange = { name = it },
             label = { Text(stringResource(R.string.api_key_label)) },
-            placeholder = { Text("e.g. OpenAI, Claude, Custom") },
+            placeholder = { Text(stringResource(R.string.api_account_label_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             singleLine = true
@@ -329,7 +329,7 @@ private fun ApiAccountCard(
                     ) {
                         Icon(
                             imageVector = if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = "Toggle key visibility",
+                            contentDescription = stringResource(R.string.content_desc_toggle_key),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             modifier = Modifier.size(16.dp)
                         )

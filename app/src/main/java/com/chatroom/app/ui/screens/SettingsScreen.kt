@@ -336,7 +336,7 @@ fun SettingsScreen(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("选择备份文件...")
+                Text(stringResource(R.string.settings_select_backup))
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -527,7 +527,7 @@ private fun AboutItem(
             Spacer(modifier = Modifier.width(4.dp))
             Icon(
                 imageVector = Icons.Default.OpenInBrowser,
-                contentDescription = "Open",
+                contentDescription = stringResource(R.string.open_repo_page),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(18.dp)
             )

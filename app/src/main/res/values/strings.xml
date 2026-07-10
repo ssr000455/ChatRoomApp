@@ -207,4 +207,95 @@
 
     <!-- Terminal Commands -->
     <string name="terminal_exit_code">Exit code: %d</string>
+
+    <!-- Chat Settings -->
+    <string name="chat_settings">Chat Settings</string>
+    <string name="system_prompt">System Prompt</string>
+    <string name="save_prompt">Save Prompt</string>
+    <string name="share_account_info">Share Account Info</string>
+    <string name="account_info_desc">Let AI know your current account and model</string>
+    <string name="ai_access_level">AI Access Level</string>
+    <string name="ai_access_level_desc">Control what the AI can do</string>
+    <string name="connection_status">Connection Status</string>
+    <string name="repo_label">Repo: </string>
+    <string name="branch_label">Branch: </string>
+    <string name="status_label">Status: </string>
+    <string name="connected">Connected</string>
+    <string name="not_authenticated">Not authenticated</string>
+    <string name="no_repo_connected">No repository connected</string>
+    <string name="show_ai_changes">Show AI Changes in Chat</string>
+    <string name="show_ai_changes_desc">Display terminal commands and file changes inline</string>
+    <string name="ai_read_header">AI Can Read These Conversations</string>
+    <string name="ai_read_desc">Select sessions for AI context</string>
+    <string name="no_other_sessions">No other conversations yet</string>
+    <string name="messages_count">%d messages</string>
+    <string name="scroll_to_bottom">Scroll to bottom</string>
+    <string name="remove_reference">Remove reference</string>
+
+    <!-- AI Access Level -->
+    <string name="access_read_only">Read Only</string>
+    <string name="access_read_write">Read + Write</string>
+    <string name="access_full">Full Access (Read + Write + Git)</string>
+    <string name="access_read_only_desc">AI can read files and analyze code</string>
+    <string name="access_read_write_desc">AI can read and modify code files</string>
+    <string name="access_full_desc">AI can read, write, and commit code</string>
+
+    <!-- Repo Browser -->
+    <string name="repo_git_not_available">Git not available</string>
+    <string name="repo_git_not_available_desc">Git command not found. Place a static git binary in tools/bin or use Online mode.</string>
+    <string name="repo_empty">Repository is empty</string>
+    <string name="repo_not_cloned">Repository not cloned yet</string>
+    <string name="repo_cloning">Cloning repository</string>
+    <string name="repo_executing">Executing script…</string>
+    <string name="repo_online_mode">Online Mode</string>
+
+    <!-- Terminal -->
+    <string name="terminal_welcome">ChatRoom Terminal - Code Repository Access</string>
+    <string name="terminal_help_hint">Type \'help\' for available commands. Press Enter to execute.</string>
+    <string name="terminal_install_hint">Install tools: pkg install git curl wget tree nano vim</string>
+    <string name="terminal_close">Close Terminal</string>
+    <string name="terminal_execute">Execute</string>
+
+    <!-- Coding Assistant Wizard -->
+    <string name="wizard_customize_hint">Customize how the coding assistant behaves. You can change this later.</string>
+    <string name="wizard_pat_label">Personal Access Token</string>
+
+    <!-- Wizard Navigation -->
+    <string name="wizard_back">Back</string>
+    <string name="wizard_disconnect">Disconnect</string>
+    <string name="wizard_connect_repo_btn">Connect Repository</string>
+    <string name="wizard_token_hint">Token is only stored locally, used for cloning and accessing repo code</string>
+
+    <!-- API Account -->
+    <string name="api_account_label_placeholder">e.g. OpenAI, Claude, Custom</string>
+
+    <!-- Identity Placeholders -->
+    <string name="identity_name_placeholder">e.g. Tech Scholar, Friendly Assistant</string>
+    <string name="identity_desc_placeholder">Who is this persona? What role do they play?</string>
+    <string name="identity_personality_placeholder">e.g. humorous, patient, thoughtful, witty</string>
+    <string name="identity_knowledge_placeholder">e.g. programming, literature, science, art</string>
+    <string name="identity_tone_placeholder">e.g. casual, professional, poetic, concise</string>
+    <string name="identity_extra_placeholder">Anything else to define this identity\u2026</string>
+
+    <!-- Repo Browser -->
+    <string name="repo_cancel_clone">Cancel Clone</string>
+    <string name="repo_retry">Retry</string>
+    <string name="repo_install">Install</string>
+    <string name="repo_installed">Installed</string>
+
+    <!-- Settings -->
+    <string name="settings_select_backup">Select Backup File</string>
+
+    <!-- Terminal -->
+    <string name="terminal_running">Running\u2026</string>
+
+    <!-- Content Descriptions -->
+    <string name="content_desc_menu">Menu</string>
+    <string name="content_desc_avatar">Avatar</string>
+    <string name="content_desc_toggle_key">Toggle key visibility</string>
+
+    <!-- Translate Language Labels -->
+    <string name="translate_lang_zh_cn">简体中文</string>
+    <string name="translate_lang_zh_tw">繁體中文</string>
+    <string name="translate_lang_en">English</string>
 </resources>

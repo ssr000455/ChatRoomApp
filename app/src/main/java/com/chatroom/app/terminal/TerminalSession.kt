@@ -139,48 +139,65 @@ class TerminalSession(
             val process = buildProcess(trimmed).start()
             var processOutput = ""
             var processExitCode = -1
+
             try {
-                // Read output in chunks to avoid pipe buffer deadlock
-                val reader = process.inputStream.bufferedReader()
                 val outputBuilder = StringBuilder()
                 val commandTimeout = 30000L
                 val startTime = System.currentTimeMillis()
                 var timedOut = false
+
+                // Read output in chunks to avoid pipe buffer deadlock.
+                // Use inputStream.available() to check for data without blocking.
+                // If the stream is closed (timeout destroy), readLine returns null.
                 while (true) {
-                    if (reader.ready()) {
-                        val line = reader.readLine()
-                        if (line == null) break
-                        outputBuilder.appendLine(line)
-                    } else {
-                        // Check if process has exited
-                        try {
-                            processExitCode = process.exitValue()
-                            break
-                        } catch (_: IllegalThreadStateException) {
-                            // Process still running
-                        }
-                        // Check timeout
-                        if (System.currentTimeMillis() - startTime > commandTimeout) {
-                            timedOut = true
-                            process.destroyForcibly()
-                            outputBuilder.appendLine("\n[Command timed out after ${commandTimeout / 1000}s]")
-                            break
-                        }
-                        // Small delay to avoid busy-waiting
-                        Thread.sleep(50)
+                    // Check timeout before each iteration
+                    if (System.currentTimeMillis() - startTime > commandTimeout) {
+                        timedOut = true
+                        process.destroyForcibly()
+                        outputBuilder.appendLine()
+                        outputBuilder.append("[Command timed out after ${commandTimeout / 1000}s]")
+                        break
                     }
-                }
-                // Read any remaining output
-                try {
-                    val remaining = reader.readText()
-                    if (remaining.isNotEmpty()) outputBuilder.append(remaining)
-                } catch (_: Exception) {}
-                processOutput = outputBuilder.toString().trimEnd()
-                if (!timedOut) {
+
+                    // Check if data is available without blocking
+                    val available = try {
+                        process.inputStream.available()
+                    } catch (_: Exception) {
+                        -1
+                    }
+
+                    if (available > 0) {
+                        // Data available — read it raw, not line-by-line,
+                        // to avoid issues with buffered reader ready() on pipes
+                        val buf = ByteArray(available)
+                        val n = process.inputStream.read(buf, 0, available)
+                        if (n > 0) {
+                            @Suppress("DEPRECATION")
+                            outputBuilder.append(String(buf, 0, n, Charsets.UTF_8))
+                        }
+                    }
+
+                    // Check if process has exited
                     try {
-                        processExitCode = process.waitFor()
-                    } catch (_: Exception) {}
+                        processExitCode = process.exitValue()
+                        // Process finished — drain any remaining output
+                        try {
+                            val remainingBytes = process.inputStream.readBytes()
+                            if (remainingBytes.isNotEmpty()) {
+                                @Suppress("DEPRECATION")
+                                outputBuilder.append(String(remainingBytes, 0, remainingBytes.size, Charsets.UTF_8))
+                            }
+                        } catch (_: Exception) {}
+                        break
+                    } catch (_: IllegalThreadStateException) {
+                        // Process still running
+                    }
+
+                    // Brief sleep to avoid busy-spinning
+                    Thread.sleep(30)
                 }
+
+                processOutput = outputBuilder.toString().trimEnd()
             } finally {
                 // Always destroy the process to avoid zombie processes
                 try { process.destroyForcibly() } catch (_: Exception) {}

@@ -45,8 +45,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Divider
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -213,7 +211,7 @@ fun ChatScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Settings",
+                        contentDescription = stringResource(R.string.settings),
                         tint = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.size(26.dp)
                     )
@@ -380,7 +378,7 @@ fun ChatScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Remove reference",
+                        contentDescription = stringResource(R.string.remove_reference),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         modifier = Modifier.size(16.dp)
                     )
@@ -548,7 +546,7 @@ fun ChatScreen(
             ) {
                 // Header
                 Text(
-                    text = "Chat Settings",
+                    text = stringResource(R.string.chat_settings),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -557,7 +555,7 @@ fun ChatScreen(
 
                 // ── System Prompt ──
                 Text(
-                    text = "System Prompt",
+                    text = stringResource(R.string.system_prompt),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -580,7 +578,7 @@ fun ChatScreen(
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Save Prompt")
+                    Text(stringResource(R.string.save_prompt))
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -596,12 +594,12 @@ fun ChatScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Share Account Info",
+                            text = stringResource(R.string.share_account_info),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "Let AI know your current account & model",
+                            text = stringResource(R.string.account_info_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -616,63 +614,72 @@ fun ChatScreen(
                 Divider()
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // ── Translate ──
-                var translateText by remember { mutableStateOf("") }
-                var translateLang by remember { mutableStateOf("简体中文") }
-                val translateLanguages = listOf("简体中文", "繁體中文", "English")
+                // ── 应用语言切换 ──
+                val contextForLang = LocalContext.current
+                var currentLang by remember { mutableStateOf(
+                    contextForLang.getSharedPreferences("settings_preferences", 0)
+                        .getString("language", "zh-CN") ?: "zh-CN"
+                ) }
                 Text(
-                    text = stringResource(R.string.translate),
+                    text = stringResource(R.string.language),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Text(
-                    text = "Translate text to another language",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = translateText,
-                    onValueChange = { translateText = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    textStyle = MaterialTheme.typography.bodySmall,
-                    placeholder = { Text("Enter text to translate...", style = MaterialTheme.typography.bodySmall) }
+                val langOptions = listOf(
+                    "zh-CN" to stringResource(R.string.language_zh_cn),
+                    "zh-TW" to stringResource(R.string.language_zh_tw),
+                    "en" to stringResource(R.string.language_en)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    translateLanguages.forEach { lang ->
-                        SuggestionChip(
-                            onClick = { translateLang = lang },
-                            label = { Text(lang, style = MaterialTheme.typography.labelSmall) },
-                            colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = if (translateLang == lang)
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                else
-                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            ),
-                            border = null
+                langOptions.forEach { (code, label) ->
+                    val selected = currentLang == code
+                    val bg by animateColorAsState(
+                        targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer
+                                     else MaterialTheme.colorScheme.surface,
+                        animationSpec = tween(200)
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(bg)
+                            .clickable {
+                                currentLang = code
+                                contextForLang.getSharedPreferences("settings_preferences", 0)
+                                    .edit().putString("language", code).commit()
+                                // Signal recreate to apply new locale
+                                (contextForLang as? android.app.Activity)?.recreate()
+                            }
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Language,
+                            contentDescription = null,
+                            tint = if (selected) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
                         )
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        if (translateText.isNotBlank()) {
-                            viewModel.toggleChatSettings()
-                            viewModel.translateMessage(translateText, translateLang)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                                    else MaterialTheme.colorScheme.onSurface,
+                            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (selected) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
-                    },
-                    enabled = translateText.isNotBlank(),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.TravelExplore, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.translate))
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -684,13 +691,13 @@ fun ChatScreen(
 
                     // AI Access Level
                     Text(
-                        text = "AI Access Level",
+                        text = stringResource(R.string.ai_access_level),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Control what the AI can do",
+                        text = stringResource(R.string.ai_access_level_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -698,14 +705,14 @@ fun ChatScreen(
                     val levels = AiAccessLevel.values()
                     levels.forEach { level ->
                         val label = when (level) {
-                            AiAccessLevel.READ_ONLY -> "Read Only"
-                            AiAccessLevel.READ_WRITE -> "Read + Write"
-                            AiAccessLevel.FULL_ACCESS -> "Full Access (Read + Write + Git)"
+                            AiAccessLevel.READ_ONLY -> stringResource(R.string.access_read_only)
+                            AiAccessLevel.READ_WRITE -> stringResource(R.string.access_read_write)
+                            AiAccessLevel.FULL_ACCESS -> stringResource(R.string.access_full)
                         }
                         val desc = when (level) {
-                            AiAccessLevel.READ_ONLY -> "AI can read files and analyze code"
-                            AiAccessLevel.READ_WRITE -> "AI can read and modify code files"
-                            AiAccessLevel.FULL_ACCESS -> "AI can read, write, and commit code"
+                            AiAccessLevel.READ_ONLY -> stringResource(R.string.access_read_only_desc)
+                            AiAccessLevel.READ_WRITE -> stringResource(R.string.access_read_write_desc)
+                            AiAccessLevel.FULL_ACCESS -> stringResource(R.string.access_full_desc)
                         }
                         Row(
                             modifier = Modifier
@@ -740,7 +747,7 @@ fun ChatScreen(
 
                     // Connection Status
                     Text(
-                        text = "Connection Status",
+                        text = stringResource(R.string.connection_status),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -749,7 +756,7 @@ fun ChatScreen(
                     if (session.repoUrl.isNotBlank()) {
                         Row(modifier = Modifier.padding(vertical = 2.dp)) {
                             Text(
-                                text = "Repo: ",
+                                text = stringResource(R.string.repo_label),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -761,7 +768,7 @@ fun ChatScreen(
                         }
                         Row(modifier = Modifier.padding(vertical = 2.dp)) {
                             Text(
-                                text = "Branch: ",
+                                text = stringResource(R.string.branch_label),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -773,12 +780,12 @@ fun ChatScreen(
                         }
                         Row(modifier = Modifier.padding(vertical = 2.dp)) {
                             Text(
-                                text = "Status: ",
+                                text = stringResource(R.string.status_label),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = if (session.repoToken.isNotBlank()) "Connected" else "Not authenticated",
+                                text = if (session.repoToken.isNotBlank()) stringResource(R.string.connected) else stringResource(R.string.not_authenticated),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Medium,
                                 color = if (session.repoToken.isNotBlank())
@@ -789,7 +796,7 @@ fun ChatScreen(
                         }
                     } else {
                         Text(
-                            text = "No repository connected",
+                            text = stringResource(R.string.no_repo_connected),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
@@ -808,12 +815,12 @@ fun ChatScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Show AI Changes in Chat",
+                                text = stringResource(R.string.show_ai_changes),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "Display terminal commands and file changes inline",
+                                text = stringResource(R.string.show_ai_changes_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -853,12 +860,12 @@ fun ChatScreen(
 
                 // ── Select Reference Sessions ──
                 Text(
-                    text = "AI Can Read These Conversations",
+                    text = stringResource(R.string.ai_read_header),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Select sessions for AI context",
+                    text = stringResource(R.string.ai_read_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -866,7 +873,7 @@ fun ChatScreen(
 
                 if (allSessions.isEmpty()) {
                     Text(
-                        text = "No other conversations yet",
+                        text = stringResource(R.string.no_other_sessions),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         modifier = Modifier.padding(vertical = 8.dp)
@@ -898,7 +905,7 @@ fun ChatScreen(
                                         maxLines = 1
                                     )
                                     Text(
-                                        text = "${session.messages.size} messages",
+                                        text = stringResource(R.string.messages_count, session.messages.size),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -953,7 +960,7 @@ private fun ScrollToBottomFab(
         ) {
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = "Scroll to bottom",
+                contentDescription = stringResource(R.string.scroll_to_bottom),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(24.dp)
             )

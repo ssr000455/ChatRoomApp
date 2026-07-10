@@ -207,4 +207,95 @@
 
     <!-- Terminal Commands -->
     <string name="terminal_exit_code">退出码：%d</string>
+
+    <!-- Chat Settings -->
+    <string name="chat_settings">聊天设置</string>
+    <string name="system_prompt">系统提示词</string>
+    <string name="save_prompt">保存提示词</string>
+    <string name="share_account_info">分享账户信息</string>
+    <string name="account_info_desc">让 AI 知道当前使用的账户和模型</string>
+    <string name="ai_access_level">AI 访问级别</string>
+    <string name="ai_access_level_desc">控制 AI 可以执行的操作</string>
+    <string name="connection_status">连接状态</string>
+    <string name="repo_label">仓库：</string>
+    <string name="branch_label">分支：</string>
+    <string name="status_label">状态：</string>
+    <string name="connected">已连接</string>
+    <string name="not_authenticated">未认证</string>
+    <string name="no_repo_connected">未连接仓库</string>
+    <string name="show_ai_changes">在聊天中显示 AI 更改</string>
+    <string name="show_ai_changes_desc">在聊天中显示终端命令和文件更改</string>
+    <string name="ai_read_header">AI 可以阅读以下对话</string>
+    <string name="ai_read_desc">选择会话作为 AI 上下文</string>
+    <string name="no_other_sessions">暂无其他对话</string>
+    <string name="messages_count">%d 条消息</string>
+    <string name="scroll_to_bottom">滚动到底部</string>
+    <string name="remove_reference">移除引用</string>
+
+    <!-- AI Access Level -->
+    <string name="access_read_only">只读</string>
+    <string name="access_read_write">读写</string>
+    <string name="access_full">完全访问（读写 + Git）</string>
+    <string name="access_read_only_desc">AI 可以读取文件和分析代码</string>
+    <string name="access_read_write_desc">AI 可以读取和修改代码文件</string>
+    <string name="access_full_desc">AI 可以读取、写入和提交代码</string>
+
+    <!-- Repo Browser -->
+    <string name="repo_git_not_available">Git 不可用</string>
+    <string name="repo_git_not_available_desc">未找到 git 命令。将静态 git 二进制文件放到 tools/bin 目录，或使用在线模式。</string>
+    <string name="repo_empty">仓库为空</string>
+    <string name="repo_not_cloned">仓库尚未克隆到本地</string>
+    <string name="repo_cloning">正在克隆仓库</string>
+    <string name="repo_executing">正在执行脚本…</string>
+    <string name="repo_online_mode">在线模式</string>
+
+    <!-- Terminal -->
+    <string name="terminal_welcome">ChatRoom 终端 - 代码仓库访问</string>
+    <string name="terminal_help_hint">输入 help 查看可用命令。按 Enter 执行。</string>
+    <string name="terminal_install_hint">安装工具：pkg install git curl wget tree nano vim</string>
+    <string name="terminal_close">关闭终端</string>
+    <string name="terminal_execute">执行</string>
+
+    <!-- Coding Assistant Wizard -->
+    <string name="wizard_customize_hint">自定义编程助手的行为。后续可以修改。</string>
+    <string name="wizard_pat_label">个人访问令牌</string>
+
+    <!-- Wizard Navigation -->
+    <string name="wizard_back">返回</string>
+    <string name="wizard_disconnect">断开</string>
+    <string name="wizard_connect_repo_btn">连接仓库</string>
+    <string name="wizard_token_hint">令牌仅保存在本地，用于克隆和访问仓库代码</string>
+
+    <!-- API Account -->
+    <string name="api_account_label_placeholder">例如 OpenAI、Claude、Custom</string>
+
+    <!-- Identity Placeholders -->
+    <string name="identity_name_placeholder">例如 技术学者、友好助手</string>
+    <string name="identity_desc_placeholder">这个身份是什么？扮演什么角色？</string>
+    <string name="identity_personality_placeholder">例如 幽默、耐心、细心、机智</string>
+    <string name="identity_knowledge_placeholder">例如 编程、文学、科学、艺术</string>
+    <string name="identity_tone_placeholder">例如 随意、专业、诗意、简洁</string>
+    <string name="identity_extra_placeholder">定义此身份的其他信息\u2026</string>
+
+    <!-- Repo Browser -->
+    <string name="repo_cancel_clone">取消克隆</string>
+    <string name="repo_retry">重试</string>
+    <string name="repo_install">安装</string>
+    <string name="repo_installed">已安装</string>
+
+    <!-- Settings -->
+    <string name="settings_select_backup">选择备份文件</string>
+
+    <!-- Terminal -->
+    <string name="terminal_running">运行中\u2026</string>
+
+    <!-- Content Descriptions -->
+    <string name="content_desc_menu">菜单</string>
+    <string name="content_desc_avatar">头像</string>
+    <string name="content_desc_toggle_key">切换密钥可见性</string>
+
+    <!-- Translate Language Labels -->
+    <string name="translate_lang_zh_cn">简体中文</string>
+    <string name="translate_lang_zh_tw">繁體中文</string>
+    <string name="translate_lang_en">English</string>
 </resources>

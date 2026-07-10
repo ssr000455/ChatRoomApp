@@ -280,21 +280,21 @@ fun ChatBubble(
                                 onDismissRequest = { translateExpanded = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("简体中文") },
+                                    text = { Text(stringResource(R.string.translate_lang_zh_cn)) },
                                     onClick = {
                                         translateExpanded = false
                                         onTranslate(message.content, "Simplified Chinese")
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("繁體中文") },
+                                    text = { Text(stringResource(R.string.translate_lang_zh_tw)) },
                                     onClick = {
                                         translateExpanded = false
                                         onTranslate(message.content, "Traditional Chinese")
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("English") },
+                                    text = { Text(stringResource(R.string.translate_lang_en)) },
                                     onClick = {
                                         translateExpanded = false
                                         onTranslate(message.content, "English")

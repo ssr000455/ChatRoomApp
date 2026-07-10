@@ -243,7 +243,7 @@ private fun AddIdentityForm(onSave: (Identity) -> Unit) {
                             .data(previewBytes)
                             .crossfade(true)
                             .build(),
-                        contentDescription = "Avatar",
+                        contentDescription = stringResource(R.string.content_desc_avatar),
                         modifier = Modifier
                             .size(72.dp)
                             .clip(CircleShape),
@@ -271,7 +271,7 @@ private fun AddIdentityForm(onSave: (Identity) -> Unit) {
                             .data(photoUri)
                             .crossfade(true)
                             .build(),
-                        contentDescription = "Avatar",
+                        contentDescription = stringResource(R.string.content_desc_avatar),
                         modifier = Modifier
                             .size(72.dp)
                             .clip(CircleShape),
@@ -310,7 +310,7 @@ private fun AddIdentityForm(onSave: (Identity) -> Unit) {
             value = name,
             onValueChange = { name = it },
             label = { Text(stringResource(R.string.identity_name)) },
-            placeholder = { Text("e.g. Tech Scholar, Friendly Assistant") },
+            placeholder = { Text(stringResource(R.string.identity_name_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             singleLine = true
@@ -320,7 +320,7 @@ private fun AddIdentityForm(onSave: (Identity) -> Unit) {
             value = description,
             onValueChange = { description = it },
             label = { Text(stringResource(R.string.identity_description)) },
-            placeholder = { Text("Who is this persona? What role do they play?") },
+            placeholder = { Text(stringResource(R.string.identity_desc_placeholder)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(80.dp),
@@ -337,7 +337,7 @@ private fun AddIdentityForm(onSave: (Identity) -> Unit) {
         OutlinedTextField(
             value = personality,
             onValueChange = { personality = it },
-            placeholder = { Text("e.g. humorous, patient, thoughtful, witty") },
+            placeholder = { Text(stringResource(R.string.identity_personality_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             singleLine = true
@@ -353,7 +353,7 @@ private fun AddIdentityForm(onSave: (Identity) -> Unit) {
         OutlinedTextField(
             value = knowledge,
             onValueChange = { knowledge = it },
-            placeholder = { Text("e.g. programming, literature, science, art") },
+            placeholder = { Text(stringResource(R.string.identity_knowledge_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             singleLine = true
@@ -369,7 +369,7 @@ private fun AddIdentityForm(onSave: (Identity) -> Unit) {
         OutlinedTextField(
             value = tone,
             onValueChange = { tone = it },
-            placeholder = { Text("e.g. casual, professional, poetic, concise") },
+            placeholder = { Text(stringResource(R.string.identity_tone_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             singleLine = true
@@ -385,7 +385,7 @@ private fun AddIdentityForm(onSave: (Identity) -> Unit) {
         OutlinedTextField(
             value = extraNotes,
             onValueChange = { extraNotes = it },
-            placeholder = { Text("Anything else to define this identity...") },
+            placeholder = { Text(stringResource(R.string.identity_extra_placeholder)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(80.dp),

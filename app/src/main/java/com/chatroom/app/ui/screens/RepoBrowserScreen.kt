@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -430,8 +431,8 @@ fun RepoBrowserScreen(
     // File viewer
     if (selectedFile != null && fileContent != null) {
         FileViewerScreen(
-            fileName = selectedFile!!.name,
-            content = fileContent!!,
+            fileName = selectedFile?.name ?: "",
+            content = fileContent ?: "",
             onBack = {
                 selectedFile = null
                 fileContent = null
@@ -456,7 +457,7 @@ fun RepoBrowserScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Menu,
-                    contentDescription = "Menu",
+                    contentDescription = stringResource(R.string.content_desc_menu),
                     tint = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.size(24.dp)
                 )
@@ -481,7 +482,7 @@ fun RepoBrowserScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = "刷新",
+                        contentDescription = stringResource(R.string.repo_refresh),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(22.dp)
                     )
@@ -505,7 +506,7 @@ fun RepoBrowserScreen(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = currentDir!!.absolutePath.removePrefix(repoDir.parentFile?.absolutePath ?: ""),
+                    text = (currentDir ?: repoDir).absolutePath.removePrefix(repoDir.parentFile?.absolutePath ?: ""),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -643,7 +644,7 @@ fun RepoBrowserScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("取消克隆")
+                        Text(stringResource(R.string.repo_cancel_clone))
                     }
                 }
             }
@@ -662,7 +663,7 @@ fun RepoBrowserScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = cloneError!!,
+                        text = cloneError ?: "",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -671,7 +672,7 @@ fun RepoBrowserScreen(
                         onClick = { startClone() },
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("重试")
+                        Text(stringResource(R.string.repo_retry))
                     }
                 }
             }
@@ -767,12 +768,12 @@ fun RepoBrowserScreen(
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.height(32.dp)
                             ) {
-                                Text("安装", style = MaterialTheme.typography.labelSmall)
+                                Text(stringResource(R.string.repo_install), style = MaterialTheme.typography.labelSmall)
                             }
                         } else {
                             Icon(
                                 imageVector = Icons.Default.FolderOpen,
-                                contentDescription = "已安装",
+                                contentDescription = stringResource(R.string.repo_installed),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -831,12 +832,12 @@ fun RepoBrowserScreen(
                                         shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.height(32.dp)
                                     ) {
-                                        Text("安装", style = MaterialTheme.typography.labelSmall)
+                                        Text(stringResource(R.string.repo_install), style = MaterialTheme.typography.labelSmall)
                                     }
                                 } else {
                                     androidx.compose.material3.Icon(
                                         imageVector = Icons.Default.FolderOpen,
-                                        contentDescription = "已安装",
+                                        contentDescription = stringResource(R.string.repo_installed),
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp)
                                     )
@@ -933,7 +934,7 @@ fun RepoBrowserScreen(
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
                                     Text(
-                                        text = "Git not available",
+                                        text = stringResource(R.string.repo_git_not_available),
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onErrorContainer
@@ -1139,7 +1140,7 @@ private fun FileViewerScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.FolderOpen,
-                    contentDescription = "返回",
+                    contentDescription = stringResource(R.string.wizard_back),
                     tint = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.size(24.dp)
                 )

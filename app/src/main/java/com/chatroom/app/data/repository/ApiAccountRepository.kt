@@ -25,14 +25,15 @@ class ApiAccountRepository(private val context: Context) {
     val accounts: Flow<List<ApiAccount>> = context.apiDataStore.data.map { prefs ->
         val json = prefs[ACCOUNTS_KEY] ?: "[]"
         val type = object : TypeToken<List<ApiAccount>>() {}.type
-        gson.fromJson(json, type)
+        val list: List<ApiAccount> = gson.fromJson(json, type)
+        list.map { it.sanitize() }
     }
 
     val activeAccount: Flow<ApiAccount?> = context.apiDataStore.data.map { prefs ->
         val activeId = prefs[ACTIVE_ID_KEY] ?: return@map null
         val json = prefs[ACCOUNTS_KEY] ?: "[]"
         val type = object : TypeToken<List<ApiAccount>>() {}.type
-        val list: List<ApiAccount> = gson.fromJson(json, type)
+        val list: List<ApiAccount> = gson.fromJson(json, type).map { it.sanitize() }
         list.find { it.id == activeId }
     }
 

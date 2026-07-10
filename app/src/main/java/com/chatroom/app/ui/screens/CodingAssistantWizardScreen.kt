@@ -98,7 +98,7 @@ fun CodingAssistantWizardScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.close),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
@@ -200,7 +200,7 @@ fun CodingAssistantWizardScreen(
                         currentStep = WizardStep.values()[currentStep.ordinal - 1]
                     }
                 ) {
-                    Text("Back")
+                    Text(stringResource(R.string.wizard_back))
                 }
             } else {
                 Spacer(modifier = Modifier.size(1.dp))
@@ -215,8 +215,9 @@ fun CodingAssistantWizardScreen(
                             val segments = uri.pathSegments
                             val parsedOwner = if (segments.size >= 2) segments[0] else repoOwner
                             val parsedName = if (segments.size >= 2) segments[1].removeSuffix(".git") else repoName
+                            if (selectedApiAccountId == null) return@Button
                             onCreate(
-                                selectedApiAccountId!!,
+                                selectedApiAccountId,
                                 systemPrompt,
                                 repoUrl,
                                 parsedOwner,
@@ -434,7 +435,7 @@ private fun SystemPromptStep(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Customize how the coding assistant behaves. You can change this later.",
+            text = stringResource(R.string.wizard_customize_hint),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -591,14 +592,14 @@ private fun ConnectRepoStep(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("断开")
+                        Text(stringResource(R.string.wizard_disconnect))
                     }
                 }
             }
         } else {
             // Not connected - show PAT input + repo URL
             Text(
-                text = "Personal Access Token",
+                text = stringResource(R.string.wizard_pat_label),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -678,13 +679,13 @@ private fun ConnectRepoStep(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("连接仓库")
+                Text(stringResource(R.string.wizard_connect_repo_btn))
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "令牌仅保存在本地，用于克隆和访问仓库代码",
+                text = stringResource(R.string.wizard_token_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier.padding(horizontal = 4.dp)

@@ -9,6 +9,7 @@ import java.util.Date
 import java.util.Locale
 
 object AppLogger {
+    @Volatile
     private var logFile: File? = null
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
 
@@ -39,12 +40,17 @@ object AppLogger {
     }
 
     private fun writeToFile(tag: String, message: String) {
-        logFile?.let { file ->
-            try {
-                FileWriter(file, true).use { writer ->
-                    writer.appendLine("${dateFormat.format(Date())} [$tag] $message")
-                }
-            } catch (_: Exception) {}
+        val file = logFile ?: return
+        val line: String
+        synchronized(dateFormat) {
+            line = "${dateFormat.format(Date())} [$tag] $message"
+        }
+        try {
+            FileWriter(file, true).use { writer ->
+                writer.appendLine(line)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AppLogger", "write failed: ${e.message}")
         }
     }
 }

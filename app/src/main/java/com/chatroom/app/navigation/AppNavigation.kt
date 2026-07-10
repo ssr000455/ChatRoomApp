@@ -104,8 +104,8 @@ private fun MainContentRouter(
     val mode = activeSession?.mode ?: SessionMode.CHAT
 
     if (isCodingAssistant && mode == SessionMode.TERMINAL) {
-        val sessionId = activeSession!!.id
-        val terminalSession = terminalSessions[sessionId]
+        val session = activeSession ?: return@AnimatedContent
+        val terminalSession = terminalSessions[session.id]
         if (terminalSession != null) {
             TerminalScreen(
                 terminalSession = terminalSession,

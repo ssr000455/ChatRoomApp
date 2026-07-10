@@ -264,6 +264,24 @@ fun Sidebar(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                             }
+                        } else {
+                            // Show add button when no coding assistants exist
+                            item {
+                                AddCodingAssistantButton(
+                                    onClick = {
+                                        onAddCodingAssistant()
+                                        onClose()
+                                    }
+                                )
+                            }
+                            item {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Divider(
+                                    color = MaterialTheme.colorScheme.outlineVariant,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
                         }
 
                         // --- Regular Chat Sessions ---
@@ -652,7 +670,7 @@ private fun ChatSessionItem(
             )
             if (isGenerating) {
                 Text(
-                    text = "generating...",
+                    text = stringResource(R.string.generating),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary
                 )

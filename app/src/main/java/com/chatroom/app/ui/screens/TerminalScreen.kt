@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -74,6 +75,7 @@ fun TerminalScreen(
 
     // Auto-focus the input field when terminal screen appears
     LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(100)
         focusRequester.requestFocus()
     }
 
@@ -123,7 +125,7 @@ fun TerminalScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Menu,
-                    contentDescription = "Menu",
+                    contentDescription = stringResource(R.string.content_desc_menu),
                     tint = textColor,
                     modifier = Modifier.size(20.dp)
                 )
@@ -156,11 +158,20 @@ fun TerminalScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Close Terminal",
+                    contentDescription = stringResource(R.string.terminal_close),
                     tint = textColor.copy(alpha = 0.7f),
                     modifier = Modifier.size(18.dp)
                 )
             }
+        }
+
+        // Running indicator
+        if (isRunning) {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth(),
+                color = promptColor.copy(alpha = 0.7f),
+                trackColor = androidx.compose.ui.graphics.Color(0xFF2D2D2D)
+            )
         }
 
         // Terminal output
@@ -174,7 +185,7 @@ fun TerminalScreen(
             // Welcome message
             item {
                 Text(
-                    text = "ChatRoom Terminal - Code Repository Access",
+                    text = stringResource(R.string.terminal_welcome),
                     style = TextStyle(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 12.sp,
@@ -183,7 +194,7 @@ fun TerminalScreen(
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
                 Text(
-                    text = "Type 'help' for available commands. Press Enter to execute.",
+                    text = stringResource(R.string.terminal_help_hint),
                     style = TextStyle(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
@@ -192,7 +203,7 @@ fun TerminalScreen(
                     modifier = Modifier.padding(bottom = 2.dp)
                 )
                 Text(
-                    text = "Install tools: pkg install git curl wget tree nano vim",
+                    text = stringResource(R.string.terminal_install_hint),
                     style = TextStyle(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
@@ -246,11 +257,12 @@ fun TerminalScreen(
             Box(modifier = Modifier.weight(1f)) {
                 BasicTextField(
                     value = inputValue,
-                    onValueChange = { inputValue = it },
+                    onValueChange = { if (!isRunning) inputValue = it },
+                    readOnly = isRunning,
                     textStyle = TextStyle(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 13.sp,
-                        color = textColor
+                        color = if (isRunning) textColor.copy(alpha = 0.4f) else textColor
                     ),
                     cursorBrush = SolidColor(textColor),
                     singleLine = true,
@@ -288,6 +300,17 @@ fun TerminalScreen(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (isRunning) {
+                    Text(
+                        text = stringResource(R.string.terminal_running),
+                        style = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            color = promptColor
+                        ),
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
                 Text(
                     text = terminalSession.workingDirectory,
                     style = TextStyle(
@@ -306,7 +329,7 @@ fun TerminalScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Execute",
+                    contentDescription = stringResource(R.string.terminal_execute),
                     tint = if (inputValue.text.isNotBlank() && !isRunning)
                         promptColor else textColor.copy(alpha = 0.3f),
                     modifier = Modifier.size(16.dp)

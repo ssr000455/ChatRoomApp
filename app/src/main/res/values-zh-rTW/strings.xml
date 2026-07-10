@@ -207,4 +207,95 @@
 
     <!-- Terminal Commands -->
     <string name="terminal_exit_code">退出碼：%d</string>
+
+    <!-- Chat Settings -->
+    <string name="chat_settings">聊天設定</string>
+    <string name="system_prompt">系統提示詞</string>
+    <string name="save_prompt">儲存提示詞</string>
+    <string name="share_account_info">分享帳戶資訊</string>
+    <string name="account_info_desc">讓 AI 知道目前使用的帳戶和模型</string>
+    <string name="ai_access_level">AI 存取層級</string>
+    <string name="ai_access_level_desc">控制 AI 可以執行的操作</string>
+    <string name="connection_status">連線狀態</string>
+    <string name="repo_label">倉庫：</string>
+    <string name="branch_label">分支：</string>
+    <string name="status_label">狀態：</string>
+    <string name="connected">已連線</string>
+    <string name="not_authenticated">未認證</string>
+    <string name="no_repo_connected">未連線倉庫</string>
+    <string name="show_ai_changes">在聊天中顯示 AI 變更</string>
+    <string name="show_ai_changes_desc">在聊天中顯示終端機指令和檔案變更</string>
+    <string name="ai_read_header">AI 可以閱讀以下對話</string>
+    <string name="ai_read_desc">選擇對話作為 AI 上下文</string>
+    <string name="no_other_sessions">暫無其他對話</string>
+    <string name="messages_count">%d 則訊息</string>
+    <string name="scroll_to_bottom">捲動到底部</string>
+    <string name="remove_reference">移除引用</string>
+
+    <!-- AI Access Level -->
+    <string name="access_read_only">唯讀</string>
+    <string name="access_read_write">讀寫</string>
+    <string name="access_full">完整存取（讀寫 + Git）</string>
+    <string name="access_read_only_desc">AI 可以讀取檔案和分析程式碼</string>
+    <string name="access_read_write_desc">AI 可以讀取和修改程式碼檔案</string>
+    <string name="access_full_desc">AI 可以讀取、寫入和提交程式碼</string>
+
+    <!-- Repo Browser -->
+    <string name="repo_git_not_available">Git 不可用</string>
+    <string name="repo_git_not_available_desc">找不到 git 指令。將靜態 git 二進位檔案放到 tools/bin 目錄，或使用線上模式。</string>
+    <string name="repo_empty">倉庫為空</string>
+    <string name="repo_not_cloned">倉庫尚未複製到本地</string>
+    <string name="repo_cloning">正在複製倉庫</string>
+    <string name="repo_executing">正在執行腳本…</string>
+    <string name="repo_online_mode">線上模式</string>
+
+    <!-- Terminal -->
+    <string name="terminal_welcome">ChatRoom 終端機 - 程式碼倉庫存取</string>
+    <string name="terminal_help_hint">輸入 help 檢視可用指令。按 Enter 執行。</string>
+    <string name="terminal_install_hint">安裝工具：pkg install git curl wget tree nano vim</string>
+    <string name="terminal_close">關閉終端機</string>
+    <string name="terminal_execute">執行</string>
+
+    <!-- Coding Assistant Wizard -->
+    <string name="wizard_customize_hint">自訂程式碼助手的行為。後續可以修改。</string>
+    <string name="wizard_pat_label">個人存取權杖</string>
+
+    <!-- Wizard Navigation -->
+    <string name="wizard_back">返回</string>
+    <string name="wizard_disconnect">斷開</string>
+    <string name="wizard_connect_repo_btn">連接倉庫</string>
+    <string name="wizard_token_hint">令牌僅保存在本地，用於克隆和訪問倉庫程式碼</string>
+
+    <!-- API Account -->
+    <string name="api_account_label_placeholder">例如 OpenAI、Claude、Custom</string>
+
+    <!-- Identity Placeholders -->
+    <string name="identity_name_placeholder">例如 技術學者、友好助手</string>
+    <string name="identity_desc_placeholder">這個身份是什麼？扮演什麼角色？</string>
+    <string name="identity_personality_placeholder">例如 幽默、耐心、細心、機智</string>
+    <string name="identity_knowledge_placeholder">例如 程式設計、文學、科學、藝術</string>
+    <string name="identity_tone_placeholder">例如 隨意、專業、詩意、簡潔</string>
+    <string name="identity_extra_placeholder">定義此身份的其他資訊\u2026</string>
+
+    <!-- Repo Browser -->
+    <string name="repo_cancel_clone">取消克隆</string>
+    <string name="repo_retry">重試</string>
+    <string name="repo_install">安裝</string>
+    <string name="repo_installed">已安裝</string>
+
+    <!-- Settings -->
+    <string name="settings_select_backup">選擇備份檔案</string>
+
+    <!-- Terminal -->
+    <string name="terminal_running">運行中\u2026</string>
+
+    <!-- Content Descriptions -->
+    <string name="content_desc_menu">選單</string>
+    <string name="content_desc_avatar">頭像</string>
+    <string name="content_desc_toggle_key">切換金鑰可見性</string>
+
+    <!-- Translate Language Labels -->
+    <string name="translate_lang_zh_cn">简体中文</string>
+    <string name="translate_lang_zh_tw">繁體中文</string>
+    <string name="translate_lang_en">English</string>
 </resources>
