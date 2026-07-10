@@ -208,12 +208,44 @@ fun RepoBrowserScreen(
         onResult(list)
     }
 
-    // Check if already cloned
-    fun checkCloned() {
-        if (repoDir.exists() && repoDir.listFiles()?.isNotEmpty() == true) {
-            isCloned = true
-            currentDir = repoDir
-            refreshFiles(repoDir) { files = it }
+    // Check if already cloned — verify by looking for .git directory (the git repo marker)
+    // Supports two layouts:
+    //   1) 编程会话-n/repoName/.git  (auto-clone layout)
+    //   2) 编程会话-n/.git           (manual clone directly in session dir)
+    fun checkCloned(): Boolean {
+        // Try the standard path first: 编程会话-n/repoName/
+        val gitDir = File(repoDir, ".git")
+        if (gitDir.isDirectory()) {
+            if (!isCloned) {
+                isCloned = true
+                currentDir = repoDir
+                refreshFiles(repoDir) { files = it }
+            }
+            return true
+        }
+        // If repoDir is a subdirectory of localPath and user cloned directly into localPath,
+        // check the parent: 编程会话-n/.git
+        if (localPath.isNotBlank() && repoName.isNotBlank()) {
+            val parentDir = File(localPath)
+            if (parentDir != repoDir && File(parentDir, ".git").isDirectory()) {
+                if (!isCloned) {
+                    isCloned = true
+                    currentDir = parentDir
+                    refreshFiles(parentDir) { files = it }
+                }
+                return true
+            }
+        }
+        return false
+    }
+
+    // Periodic polling: detect manual clone / external file changes
+    LaunchedEffect(repoName, localPath) {
+        while (true) {
+            if (!isCloning && !isCloned && repoDir.exists()) {
+                checkCloned()
+            }
+            delay(3000) // check every 3 seconds
         }
     }
 
@@ -935,6 +967,25 @@ fun RepoBrowserScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "克隆仓库",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = { checkCloned() },
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "检测本地仓库",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
