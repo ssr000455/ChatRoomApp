@@ -40,9 +40,10 @@ class TerminalSession(
     }
 
     /**
-     * Create or return the existing Termux TerminalSession
+     * Create or return the existing Termux TerminalSession.
+     * Pass a TerminalSessionClient (e.g. TerminalView) on first call for proper I/O handling.
      */
-    fun getOrCreateSession(): com.termux.terminal.TerminalSession {
+    fun getOrCreateSession(client: com.termux.terminal.TerminalSessionClient? = null): com.termux.terminal.TerminalSession {
         termuxSession?.let { return it }
 
         val shellPath = if (toolchain.isBusyboxInstalled()) {
@@ -65,7 +66,7 @@ class TerminalSession(
         )
 
         val session = com.termux.terminal.TerminalSession(
-            shellPath, null, _workingDirectory, env, null
+            arrayOf(shellPath), _workingDirectory, env, client
         )
         session.initializeEmulator(80, 24)
         termuxSession = session
@@ -82,10 +83,8 @@ class TerminalSession(
             return true
         }
         val ok = toolchain.installBusybox { msg ->
-            withContext(Dispatchers.Main) {
-                _installProgress.value = msg
-                onProgress(msg)
-            }
+            _installProgress.value = msg
+            onProgress(msg)
         }
         if (ok) {
             withContext(Dispatchers.Main) { _isReady.value = true }
@@ -94,7 +93,7 @@ class TerminalSession(
     }
 
     fun stop() {
-        termuxSession?.finish()
+        termuxSession?.close()
         termuxSession = null
         _isRunning.value = false
         Log.d(tag, "Terminal session stopped")

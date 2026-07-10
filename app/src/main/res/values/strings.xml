@@ -202,6 +202,9 @@
     <!-- File Changes -->
     <string name="file_changes">File Changes</string>
 
+    <!-- Terminal Commands -->
+    <string name="terminal_exit_code">Exit code: %d</string>
+
     <!-- Chat Settings -->
     <string name="chat_settings">Chat Settings</string>
     <string name="system_prompt">System Prompt</string>

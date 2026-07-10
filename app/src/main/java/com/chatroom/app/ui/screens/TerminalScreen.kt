@@ -113,7 +113,7 @@ fun TerminalScreen(
                 IconButton(
                     onClick = {
                         // Send Ctrl+L (form feed) to clear terminal screen
-                        terminalSession.getOrCreateSession().write(byteArrayOf(0x0C))
+                        terminalSession.getOrCreateSession().write("\u000C")
                     },
                     modifier = Modifier.size(36.dp)
                 ) {
@@ -181,8 +181,8 @@ fun TerminalScreen(
             ) {
                 AndroidView(
                     factory = { ctx ->
-                        com.termux.view.TerminalView(ctx).apply {
-                            val session = terminalSession.getOrCreateSession()
+                        com.termux.view.TerminalView(ctx, null).apply {
+                            val session = terminalSession.getOrCreateSession(this)
                             attachSession(session)
                             isFocusable = true
                             isFocusableInTouchMode = true

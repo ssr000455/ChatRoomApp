@@ -202,6 +202,9 @@
     <!-- File Changes -->
     <string name="file_changes">檔案更改</string>
 
+    <!-- Terminal Commands -->
+    <string name="terminal_exit_code">退出碼：%d</string>
+
     <!-- Chat Settings -->
     <string name="chat_settings">聊天設定</string>
     <string name="system_prompt">系統提示詞</string>
