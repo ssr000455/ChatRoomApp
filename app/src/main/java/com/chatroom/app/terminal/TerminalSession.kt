@@ -69,7 +69,10 @@ class TerminalSession(
             override fun onSessionFinished(session: com.termux.terminal.TerminalSession) {}
             override fun onTerminalCursorStateChange(state: Boolean) {}
             override fun getTerminalCursorStyle(): Int = 0
-            override fun logError(errorTag: String, message: String) { Log.e(errorTag, message) }
+            override fun logError(tag: String, message: String) { Log.e(tag, message) }
+            override fun logWarn(tag: String, message: String) { Log.w(tag, message) }
+            override fun logInfo(tag: String, message: String) { Log.i(tag, message) }
+            override fun logVerbose(tag: String, message: String) { Log.v(tag, message) }
         }
 
         val session = com.termux.terminal.TerminalSession(
