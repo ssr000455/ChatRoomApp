@@ -33,7 +33,7 @@ class ApiAccountRepository(private val context: Context) {
         val activeId = prefs[ACTIVE_ID_KEY] ?: return@map null
         val json = prefs[ACCOUNTS_KEY] ?: "[]"
         val type = object : TypeToken<List<ApiAccount>>() {}.type
-        val list: List<ApiAccount> = gson.fromJson(json, type).map { it.sanitize() }
+        val list = gson.fromJson<List<ApiAccount>>(json, type).map { it.sanitize() }
         list.find { it.id == activeId }
     }
 
