@@ -71,6 +71,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Surface
 import androidx.compose.ui.viewinterop.AndroidView
+import com.chatroom.app.R
 import com.chatroom.app.data.model.Session
 import com.chatroom.app.terminal.ExtensionPackage
 import com.chatroom.app.terminal.ToolchainInstaller

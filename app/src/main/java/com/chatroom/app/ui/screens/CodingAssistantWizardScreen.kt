@@ -209,15 +209,15 @@ fun CodingAssistantWizardScreen(
             if (currentStep == WizardStep.CONNECT_REPO) {
                 Button(
                     onClick = {
-                        if (selectedApiAccountId != null) {
+                        val accountId = selectedApiAccountId
+                        if (accountId != null) {
                             // Parse repo URL to get owner/name
                             val uri = Uri.parse(repoUrl)
                             val segments = uri.pathSegments
                             val parsedOwner = if (segments.size >= 2) segments[0] else repoOwner
                             val parsedName = if (segments.size >= 2) segments[1].removeSuffix(".git") else repoName
-                            if (selectedApiAccountId == null) return@Button
                             onCreate(
-                                selectedApiAccountId,
+                                accountId,
                                 systemPrompt,
                                 repoUrl,
                                 parsedOwner,
