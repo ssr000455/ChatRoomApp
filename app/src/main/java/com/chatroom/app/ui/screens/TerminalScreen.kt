@@ -182,7 +182,7 @@ fun TerminalScreen(
                 AndroidView(
                     factory = { ctx ->
                         com.termux.view.TerminalView(ctx, null).apply {
-                            val session = terminalSession.getOrCreateSession(this)
+                            val session = terminalSession.getOrCreateSession()
                             attachSession(session)
                             isFocusable = true
                             isFocusableInTouchMode = true

@@ -41,9 +41,8 @@ class TerminalSession(
 
     /**
      * Create or return the existing Termux TerminalSession.
-     * Pass a TerminalSessionClient (e.g. TerminalView) on first call for proper I/O handling.
      */
-    fun getOrCreateSession(client: com.termux.terminal.TerminalSessionClient? = null): com.termux.terminal.TerminalSession {
+    fun getOrCreateSession(): com.termux.terminal.TerminalSession {
         termuxSession?.let { return it }
 
         val shellPath = if (toolchain.isBusyboxInstalled()) {
@@ -65,8 +64,19 @@ class TerminalSession(
             "SHELL=$shellPath"
         )
 
+        val client = object : com.termux.terminal.TerminalSessionClient {
+            override fun onTitleChanged(session: com.termux.terminal.TerminalSession, title: String) {}
+            override fun onSessionInformationChanged(session: com.termux.terminal.TerminalSession, info: String) {}
+            override fun onBell(session: com.termux.terminal.TerminalSession) {}
+            override fun onColorsChanged(session: com.termux.terminal.TerminalSession) {}
+            override fun onTerminalSessionStateChanged(session: com.termux.terminal.TerminalSession) {}
+            override fun logError(tag: String, message: String) = Log.e(tag, message)
+            override fun logOutput(data: ByteArray, offset: Int, count: Int) {}
+            override fun onLineFeed(session: com.termux.terminal.TerminalSession) {}
+        }
+
         val session = com.termux.terminal.TerminalSession(
-            arrayOf(shellPath), _workingDirectory, env, client
+            shellPath, _workingDirectory, env, 1000, client
         )
         session.initializeEmulator(80, 24)
         termuxSession = session
@@ -93,7 +103,6 @@ class TerminalSession(
     }
 
     fun stop() {
-        termuxSession?.close()
         termuxSession = null
         _isRunning.value = false
         Log.d(tag, "Terminal session stopped")
