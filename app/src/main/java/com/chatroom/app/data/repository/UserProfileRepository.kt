@@ -33,7 +33,7 @@ class UserProfileRepository(private val context: Context) {
         val activeId = prefs[ACTIVE_ID_KEY] ?: return@map null
         val json = prefs[LIST_KEY] ?: "[]"
         val type = object : TypeToken<List<UserProfile>>() {}.type
-        val list: List<UserProfile> = gson.fromJson(json, type).map { it.sanitize() }
+        val list: List<UserProfile> = gson.fromJson<List<UserProfile>>(json, type).map { it.sanitize() }
         list.find { it.id == activeId }
     }
 
