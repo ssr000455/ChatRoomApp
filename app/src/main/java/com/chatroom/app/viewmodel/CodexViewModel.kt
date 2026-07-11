@@ -160,7 +160,7 @@ class CodexViewModel(application: Application) : AndroidViewModel(application) {
                 val executionSteps = mutableListOf<ExecutionStep>()
 
                 // Run the agent loop and collect events
-                agent.processUserInput(session, userText).collect { event ->
+                agent.processUserInput(session, userText).collect loop@{ event ->
                     events.add(event)
                     _uiState.value = _uiState.value.copy(
                         agentEvents = events.toList()
@@ -250,7 +250,7 @@ class CodexViewModel(application: Application) : AndroidViewModel(application) {
                 sessionRepo.addMessageToSession(session.id, updatedAgentMsg)
 
                 // Update session agent state
-                val updatedSession = activeSession.first() ?: return@collect
+                val updatedSession = activeSession.first() ?: return@loop
                 sessionRepo.updateSession(updatedSession.copy(
                     agentState = session.agentState.copy(
                         isActive = false,
@@ -402,7 +402,7 @@ class CodexViewModel(application: Application) : AndroidViewModel(application) {
                 if (result.success) {
                     val toolMsg = ChatMessage(
                         role = "assistant",
-                        content = "## ${config.selectedTool.label} Result\n\n${result.details}",
+                        content = "## DevTool Result\n\n${result.details}",
                         isAgentMessage = true,
                         agentRound = 0
                     )

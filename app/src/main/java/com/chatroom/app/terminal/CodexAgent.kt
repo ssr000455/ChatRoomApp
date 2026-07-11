@@ -172,7 +172,7 @@ class CodexAgent(
                             }
                             if (result.isSuccess) {
                                 val output = result.getOrThrow()
-                                terminalHistory.recordCommand(command, repoDir.absolutePath)
+                                terminalHistory.recordCommand(command, repoDir?.absolutePath ?: "")
                                 output.lines().forEach { line ->
                                     if (line.isNotBlank()) {
                                         emit(AgentEvent.CommandOutput(command = command, line = line))

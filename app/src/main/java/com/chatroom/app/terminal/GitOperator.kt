@@ -149,7 +149,7 @@ class GitOperator(
      * Create a commit with a multi-line message (reads from stdin).
      */
     suspend fun commitWithMessage(message: String): Boolean {
-        val result = runGitWithInput("commit", "-F", "-", message)
+        val result = runGitWithInput("commit", "-F", "-", input = message)
         return result != null
     }
 
@@ -310,7 +310,7 @@ class GitOperator(
             Regex("""\brm\s+--recursive"""),
             Regex("""\bgit\s+push\s+--force"""),
             Regex("""\bgit\s+push\s+-f\b"""),
-            Regex("""\bdd\s+if=""".toRegex(RegexOption.IGNORE_CASE)),
+            Regex("""\bdd\s+if=""", RegexOption.IGNORE_CASE),
             Regex("""\b:wq!\b"""),
             Regex("""\bmkfs\b"""),
             Regex("""\bfdisk\b"""),

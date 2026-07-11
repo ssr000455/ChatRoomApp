@@ -84,6 +84,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.chatroom.app.R
@@ -94,6 +95,7 @@ import com.chatroom.app.data.model.SessionType
 import com.chatroom.app.ui.components.AgentExecutionSteps
 import com.chatroom.app.ui.components.ChangeReviewSheet
 import com.chatroom.app.ui.components.ChatBubble
+import com.chatroom.app.ui.components.DevToolConfig
 import com.chatroom.app.ui.components.DevToolPanel
 import com.chatroom.app.ui.components.ThinkingIndicator
 import com.chatroom.app.viewmodel.ChatViewModel
@@ -343,7 +345,8 @@ fun ChatScreen(
                     }
 
                     // Agent running indicator
-                    if (isAgentRunning && codexUiState != null) {
+                    val currentAgentState = codexUiState
+                    if (isAgentRunning && currentAgentState != null) {
                         item {
                             Column(
                                 modifier = Modifier
@@ -351,9 +354,9 @@ fun ChatScreen(
                                     .padding(12.dp)
                             ) {
                                 // Thinking text
-                                if (codexUiState.thinkingText.isNotBlank()) {
+                                if (currentAgentState.thinkingText.isNotBlank()) {
                                     Text(
-                                        text = codexUiState.thinkingText,
+                                        text = currentAgentState.thinkingText,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.padding(bottom = 8.dp)
@@ -361,7 +364,7 @@ fun ChatScreen(
                                 }
 
                                 // Agent events as live execution steps
-                                val liveSteps = codexUiState.agentEvents.mapNotNull { event ->
+                                val liveSteps = currentAgentState.agentEvents.mapNotNull { event ->
                                     when (event) {
                                         is com.chatroom.app.data.model.AgentEvent.ReadingFile ->
                                             ExecutionStep(0, "read", "Reading ${event.path}", success = true)
@@ -377,9 +380,9 @@ fun ChatScreen(
                                 }
 
                                 // Error display
-                                if (codexUiState.error != null) {
+                                if (currentAgentState.error != null) {
                                     Text(
-                                        text = codexUiState.error ?: "",
+                                        text = currentAgentState.error ?: "",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.error,
                                         modifier = Modifier.padding(top = 4.dp)
@@ -510,7 +513,7 @@ fun ChatScreen(
         // Dev Tool Panel (agent mode)
         if (isAgentMode && codexUiState?.showDevTools == true && codexViewModel != null) {
             DevToolPanel(
-                config = codexUiState.devToolConfig,
+                config = codexUiState?.devToolConfig ?: DevToolConfig(),
                 onConfigChange = { codexViewModel.updateDevToolConfig(it) },
                 onExecute = { codexViewModel.executeDevTool() },
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
@@ -548,7 +551,7 @@ fun ChatScreen(
                         }
                     }
                     Text(
-                        text = codexUiState.devToolResult ?: "",
+                        text = codexUiState?.devToolResult ?: "",
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontFamily = FontFamily.Monospace,
                             fontSize = 11.sp
@@ -1150,7 +1153,7 @@ fun ChatScreen(
 
     // Dangerous command confirmation dialog (agent mode)
     if (codexUiState?.confirmDialog != null) {
-        val dialog = codexUiState.confirmDialog!!
+        val dialog = codexUiState!!.confirmDialog
         AlertDialog(
             onDismissRequest = { codexViewModel?.rejectCommand() },
             title = { Text(stringResource(R.string.dangerous_command_title)) },

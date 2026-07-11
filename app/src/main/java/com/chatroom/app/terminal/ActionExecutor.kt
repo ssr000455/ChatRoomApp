@@ -367,7 +367,7 @@ class ActionExecutor(
      */
     private suspend fun runCommandWithOutput(
         command: String,
-        onOutput: (line: String, isStderr: Boolean) -> Unit
+        onOutput: suspend (line: String, isStderr: Boolean) -> Unit
     ) {
         withContext(Dispatchers.IO) {
             try {
