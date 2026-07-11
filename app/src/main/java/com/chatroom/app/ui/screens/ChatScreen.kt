@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -32,16 +33,22 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.TravelExplore
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.RadioButton
@@ -52,8 +59,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -71,6 +80,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -79,17 +89,22 @@ import coil.request.ImageRequest
 import com.chatroom.app.R
 import com.chatroom.app.data.model.AiAccessLevel
 import com.chatroom.app.data.model.ChatMessage
+import com.chatroom.app.data.model.ExecutionStep
 import com.chatroom.app.data.model.SessionType
+import com.chatroom.app.ui.components.AgentExecutionSteps
 import com.chatroom.app.ui.components.ChangeReviewSheet
 import com.chatroom.app.ui.components.ChatBubble
+import com.chatroom.app.ui.components.DevToolPanel
 import com.chatroom.app.ui.components.ThinkingIndicator
 import com.chatroom.app.viewmodel.ChatViewModel
+import com.chatroom.app.viewmodel.CodexViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel,
+    codexViewModel: CodexViewModel? = null,
     onToggleSidebar: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -97,12 +112,21 @@ fun ChatScreen(
     val activeSession by viewModel.activeSession.collectAsState()
     val activeApiAccount by viewModel.activeApiAccount.collectAsState()
     val activeIdentity by viewModel.activeIdentity.collectAsState()
+    val codexUiState by codexViewModel?.uiState?.collectAsState() ?: remember { mutableStateOf(null) }
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
     val messages = activeSession?.messages ?: emptyList()
     var showChangeReview by remember { mutableStateOf(false) }
+
+    // Agent mode detection
+    val isAgentMode = activeSession?.isCodingAssistant == true
+    val isAgentRunning = codexUiState?.isAgentRunning == true
+
+    // File preview dialog state
+    var showFilePreview by remember { mutableStateOf(false) }
+    var previewFilePath by remember { mutableStateOf("") }
 
     // Show scroll-to-bottom button when not at the last message
     val showScrollToBottom by remember {
@@ -303,13 +327,65 @@ fun ChatScreen(
                                 ({ viewModel.rewriteMessage(message.id) }) else null,
                             onTranslate = if (!uiState.isSending && message.role == "assistant")
                                 ({ content, lang -> viewModel.translateMessage(content, lang) }) else null,
-                            searchSources = if (isLastAi) uiState.searchSources else emptyList()
+                            searchSources = if (isLastAi) uiState.searchSources else emptyList(),
+                            onFileClick = { path ->
+                                previewFilePath = path
+                                showFilePreview = true
+                            },
+                            onFileSelect = { path -> viewModel.setSelectedFile(path) }
                         )
                     }
 
                     if (uiState.isSending) {
                         item {
                             ThinkingIndicator(elapsedSeconds = uiState.thinkingElapsed)
+                        }
+                    }
+
+                    // Agent running indicator
+                    if (isAgentRunning && codexUiState != null) {
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp)
+                            ) {
+                                // Thinking text
+                                if (codexUiState.thinkingText.isNotBlank()) {
+                                    Text(
+                                        text = codexUiState.thinkingText,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
+                                }
+
+                                // Agent events as live execution steps
+                                val liveSteps = codexUiState.agentEvents.mapNotNull { event ->
+                                    when (event) {
+                                        is com.chatroom.app.data.model.AgentEvent.ReadingFile ->
+                                            ExecutionStep(0, "read", "Reading ${event.path}", success = true)
+                                        is com.chatroom.app.data.model.AgentEvent.WritingFile ->
+                                            ExecutionStep(0, "write", "Writing ${event.path}", success = true)
+                                        is com.chatroom.app.data.model.AgentEvent.CommandOutput ->
+                                            ExecutionStep(0, "cmd", event.line.take(100), success = true)
+                                        else -> null
+                                    }
+                                }
+                                if (liveSteps.isNotEmpty()) {
+                                    AgentExecutionSteps(steps = liveSteps, isRunning = true)
+                                }
+
+                                // Error display
+                                if (codexUiState.error != null) {
+                                    Text(
+                                        text = codexUiState.error ?: "",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -387,6 +463,102 @@ fun ChatScreen(
             }
         }
 
+        // Selected file reference bar — shows above input when user picks a file from AI changes
+        AnimatedVisibility(
+            visible = uiState.selectedFilePath != null,
+            enter = fadeIn(animationSpec = tween(200)),
+            exit = fadeOut(animationSpec = tween(200))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 2.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AttachFile,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = uiState.selectedFilePath ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = { viewModel.clearSelectedFile() },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.remove_file_reference),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+
+        // Dev Tool Panel (agent mode)
+        if (isAgentMode && codexUiState?.showDevTools == true && codexViewModel != null) {
+            DevToolPanel(
+                config = codexUiState.devToolConfig,
+                onConfigChange = { codexViewModel.updateDevToolConfig(it) },
+                onExecute = { codexViewModel.executeDevTool() },
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+        }
+
+        // Dev tool result
+        if (isAgentMode && codexUiState?.devToolResult != null) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.dev_tool_result_title),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = {
+                            codexViewModel?.let { vm ->
+                                vm.updateDevToolConfig(vm.uiState.value.devToolConfig)
+                            }
+                        }) {
+                            Text(stringResource(R.string.dev_tool_result_clear), style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                    Text(
+                        text = codexUiState.devToolResult ?: "",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+
         // Input area
         Box(
             modifier = Modifier
@@ -426,6 +598,35 @@ fun ChatScreen(
                     }
 
                     Spacer(modifier = Modifier.height(4.dp))
+
+                    // Dev tools toggle (agent mode only)
+                    if (isAgentMode && codexViewModel != null) {
+                        val devToolBg by animateColorAsState(
+                            targetValue = if (codexUiState?.showDevTools == true)
+                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                            else
+                                MaterialTheme.colorScheme.surface,
+                            animationSpec = tween(200)
+                        )
+                        IconButton(
+                            onClick = { codexViewModel.toggleDevTools() },
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(devToolBg)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Construction,
+                                contentDescription = stringResource(R.string.dev_tools_title),
+                                tint = if (codexUiState?.showDevTools == true)
+                                    MaterialTheme.colorScheme.tertiary
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
 
                     // Web search toggle
                     val webSearchBg by animateColorAsState(
@@ -497,25 +698,34 @@ fun ChatScreen(
 
                 IconButton(
                     onClick = {
-                        if (isGenerating) {
-                            viewModel.stopSending()
+                        if (isGenerating || isAgentRunning) {
+                            if (isAgentRunning && codexViewModel != null) {
+                                codexViewModel.stopAgent()
+                            } else {
+                                viewModel.stopSending()
+                            }
                         } else {
-                            viewModel.sendMessage()
+                            if (isAgentMode && codexViewModel != null) {
+                                codexViewModel.startAgentLoop(uiState.inputText)
+                                viewModel.updateInput("")
+                            } else {
+                                viewModel.sendMessage()
+                            }
                             focusManager.clearFocus()
                         }
                     },
-                    enabled = isGenerating || uiState.inputText.isNotBlank(),
+                    enabled = isGenerating || isAgentRunning || uiState.inputText.isNotBlank(),
                     modifier = Modifier
                         .size(52.dp)
                         .clip(RoundedCornerShape(16.dp))
                         .background(btnBg)
                 ) {
                     Icon(
-                        imageVector = if (isGenerating) Icons.Default.Stop else Icons.Default.Send,
+                        imageVector = if (isGenerating || isAgentRunning) Icons.Default.Stop else Icons.Default.Send,
                         contentDescription = stringResource(
-                            if (isGenerating) R.string.stop else R.string.send
+                            if (isGenerating || isAgentRunning) R.string.stop else R.string.send
                         ),
-                        tint = if (isGenerating)
+                        tint = if (isGenerating || isAgentRunning)
                             MaterialTheme.colorScheme.onError
                         else if (uiState.inputText.isNotBlank())
                             MaterialTheme.colorScheme.onPrimary
@@ -935,6 +1145,125 @@ fun ChatScreen(
                 showChangeReview = false
             },
             onDismiss = { showChangeReview = false }
+        )
+    }
+
+    // Dangerous command confirmation dialog (agent mode)
+    if (codexUiState?.confirmDialog != null) {
+        val dialog = codexUiState.confirmDialog!!
+        AlertDialog(
+            onDismissRequest = { codexViewModel?.rejectCommand() },
+            title = { Text(stringResource(R.string.dangerous_command_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.dangerous_command_desc))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = dialog.command,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { codexViewModel?.confirmCommand() },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(stringResource(R.string.dangerous_allow))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { codexViewModel?.rejectCommand() }) {
+                    Text(stringResource(R.string.dangerous_deny))
+                }
+            }
+        )
+    }
+
+    // File preview dialog — shows file content in read-only mode when user clicks a file chip
+    if (showFilePreview && previewFilePath.isNotBlank()) {
+        val session = activeSession
+        val fileContent = remember(session, previewFilePath) {
+            val repoDir = if (session?.repoDir?.isNotBlank() == true) java.io.File(session.repoDir)
+                else if (session?.localPath?.isNotBlank() == true && session?.repoName?.isNotBlank() == true)
+                    java.io.File(session.localPath, session.repoName)
+                else null
+            if (repoDir != null) {
+                val file = repoDir.resolve(previewFilePath)
+                if (file.exists() && file.isFile && file.length() < 512_000) {
+                    try { file.readText() }
+                    catch (_: Exception) { "Error reading file" }
+                } else {
+                    "File not found or too large"
+                }
+            } else {
+                "No repository configured"
+            }
+        }
+        AlertDialog(
+            onDismissRequest = { showFilePreview = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.AttachFile,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = previewFilePath.substringAfterLast('/'),
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                }
+            },
+            text = {
+                Column {
+                    Text(
+                        text = previewFilePath,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = fileContent,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 400.dp)
+                                .verticalScroll(rememberScrollState())
+                                .padding(8.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.setSelectedFile(previewFilePath)
+                    showFilePreview = false
+                }) {
+                    Text(stringResource(R.string.select_for_chat))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFilePreview = false }) {
+                    Text(stringResource(R.string.close))
+                }
+            }
         )
     }
 }

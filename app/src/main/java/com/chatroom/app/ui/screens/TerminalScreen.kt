@@ -3,6 +3,7 @@ package com.chatroom.app.ui.screens
 import android.content.Context
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,14 +15,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,6 +57,7 @@ fun TerminalScreen(
     val isReady by terminalSession.isReady.collectAsState()
     val installProgress by terminalSession.installProgress.collectAsState()
     var terminalView by remember { mutableStateOf<com.termux.view.TerminalView?>(null) }
+    var showHistory by remember { mutableStateOf(false) }
 
     // Auto-install toolchain if not ready
     LaunchedEffect(Unit) {
@@ -110,6 +117,18 @@ fun TerminalScreen(
             )
             Spacer(modifier = Modifier.weight(1f))
             if (isReady) {
+                // History toggle button
+                IconButton(
+                    onClick = { showHistory = !showHistory },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.History,
+                        contentDescription = stringResource(R.string.command_history),
+                        tint = if (showHistory) promptColor else textColor.copy(alpha = 0.6f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
                 IconButton(
                     onClick = {
                         // Send Ctrl+L (form feed) to clear terminal screen
@@ -226,6 +245,71 @@ fun TerminalScreen(
                     },
                     modifier = Modifier.fillMaxSize()
                 )
+
+                // Command history overlay
+                if (showHistory) {
+                    val history = terminalSession.history
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xE61E1E1E))
+                            .clickable { /* consume clicks */ }
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = "Command History",
+                                style = TextStyle(
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 13.sp,
+                                    color = promptColor,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            LazyColumn(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                if (history.isEmpty()) {
+                                    item {
+                                        Text(
+                                            text = "No commands yet",
+                                            style = TextStyle(
+                                                fontFamily = FontFamily.Monospace,
+                                                fontSize = 11.sp,
+                                                color = textColor.copy(alpha = 0.5f)
+                                            ),
+                                            modifier = Modifier.padding(8.dp)
+                                        )
+                                    }
+                                } else {
+                                    items(history.reversed()) { record ->
+                                        val cmdColor = if (record.exitCode == 0) textColor
+                                            else Color(0xFFF44747)
+                                        Text(
+                                            text = "> ${record.command}",
+                                            style = TextStyle(
+                                                fontFamily = FontFamily.Monospace,
+                                                fontSize = 11.sp,
+                                                color = cmdColor
+                                            ),
+                                            modifier = Modifier.padding(vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
+                            TextButton(
+                                onClick = { showHistory = false },
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                            ) {
+                                Text(stringResource(R.string.close), color = promptColor)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

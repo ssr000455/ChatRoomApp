@@ -375,7 +375,7 @@ private fun ApiAccountCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
-                    contentDescription = "Copy API Key",
+                    contentDescription = stringResource(R.string.copy_api_key),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                     modifier = Modifier.size(16.dp)
                 )

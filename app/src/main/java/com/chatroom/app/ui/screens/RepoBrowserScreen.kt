@@ -68,10 +68,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.AltRoute
 import androidx.compose.material3.Surface
 import androidx.compose.ui.viewinterop.AndroidView
 import com.chatroom.app.R
 import com.chatroom.app.data.model.Session
+import com.chatroom.app.terminal.GitOperator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -149,6 +152,12 @@ fun RepoBrowserScreen(
     var selectedFile by remember { mutableStateOf<File?>(null) }
     var fileContent by remember { mutableStateOf<String?>(null) }
 
+    // Git status state
+    var gitBranch by remember { mutableStateOf("") }
+    var gitModified by remember { mutableStateOf(0) }
+    var gitUntracked by remember { mutableStateOf(0) }
+    var gitDirty by remember { mutableStateOf(false) }
+
     // Clone speed tracking
     var cloneSpeed by remember { mutableStateOf("") }
     var clonePercentage by remember { mutableFloatStateOf(0f) }
@@ -204,6 +213,28 @@ fun RepoBrowserScreen(
                 checkCloned()
             }
             delay(3000) // check every 3 seconds
+        }
+    }
+
+    // Periodic git status refresh
+    var gitOperator by remember { mutableStateOf<GitOperator?>(null) }
+
+    LaunchedEffect(repoDir, isCloned) {
+        if (isCloned && repoDir.exists()) {
+            gitOperator = GitOperator(repoDir)
+            while (true) {
+                try {
+                    val op = gitOperator ?: break
+                    val state = op.captureState()
+                    gitBranch = state.branch
+                    gitModified = state.unstagedFiles.size + state.stagedFiles.size
+                    gitUntracked = state.untrackedFiles.size
+                    gitDirty = state.isDirty
+                } catch (_: Exception) {
+                    // Ignore errors during periodic refresh
+                }
+                delay(5000)
+            }
         }
     }
 
@@ -469,6 +500,69 @@ fun RepoBrowserScreen(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+            }
+        }
+
+        // Git status bar
+        if (isCloned && gitBranch.isNotBlank()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AltRoute,
+                    contentDescription = null,
+                    tint = if (gitDirty) MaterialTheme.colorScheme.error
+                           else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = gitBranch,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (gitDirty) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.primary
+                )
+                if (gitDirty) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    if (gitModified > 0) {
+                        Text(
+                            text = "${gitModified} modified",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (gitUntracked > 0) {
+                        if (gitModified > 0) {
+                            Text(
+                                text = ",",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Text(
+                            text = " ${gitUntracked} untracked",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "clean",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                    )
+                }
             }
         }
 

@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Surface
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -66,6 +68,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.chatroom.app.R
 import com.chatroom.app.data.model.ChatMessage
+import com.chatroom.app.data.model.ExecutionStep
 import com.chatroom.app.data.model.FileChangeSummary
 import com.chatroom.app.data.model.TerminalCommand
 import com.chatroom.app.ui.theme.AiBubbleDark
@@ -88,6 +91,8 @@ fun ChatBubble(
     onRewrite: (() -> Unit)? = null,
     onTranslate: ((String, String) -> Unit)? = null,
     searchSources: List<String> = emptyList(),
+    onFileClick: ((String) -> Unit)? = null,
+    onFileSelect: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val isUser = message.role == "user"
@@ -161,15 +166,21 @@ fun ChatBubble(
                             .padding(horizontal = 16.dp, vertical = 10.dp)
                     )
                 } else {
-                    // File changes summary (shown before content)
+                    // File changes summary — gray chips above AI output
                     if (!message.fileChanges.isNullOrEmpty()) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 6.dp)
-                        ) {
-                            FileChangesSummary(message.fileChanges.orEmpty())
-                        }
+                        FileChangesSummary(
+                            changes = message.fileChanges.orEmpty(),
+                            onFileClick = onFileClick,
+                            onFileSelect = onFileSelect
+                        )
+                    }
+
+                    // Agent execution steps
+                    if (message.isAgentMessage && message.executionSteps.isNotEmpty()) {
+                        AgentExecutionSteps(
+                            steps = message.executionSteps,
+                            isRunning = false
+                        )
                     }
 
                     MarkdownContent(
@@ -554,53 +565,151 @@ fun ThinkingIndicator(
 }
 
 @Composable
-private fun FileChangesSummary(changes: List<FileChangeSummary>) {
-    Column(
+private fun FileChangesSummary(
+    changes: List<FileChangeSummary>,
+    onFileClick: ((String) -> Unit)? = null,
+    onFileSelect: ((String) -> Unit)? = null
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f))
-            .padding(8.dp)
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 14.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        changes.forEach { change ->
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clickable { onFileClick?.invoke(change.filePath) }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = change.filePath.substringAfterLast('/'),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    if (change.additions > 0) {
+                        Text(
+                            text = "+${change.additions}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = androidx.compose.ui.graphics.Color(0xFF4CAF50),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    if (change.deletions > 0) {
+                        Text(
+                            text = "-${change.deletions}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = androidx.compose.ui.graphics.Color(0xFFF44336),
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(start = 2.dp)
+                        )
+                    }
+                    if (onFileSelect != null) {
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = stringResource(R.string.select_file),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clickable { onFileSelect(change.filePath) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AgentExecutionSteps(
+    steps: List<ExecutionStep>,
+    isRunning: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 4.dp)
     ) {
         Text(
-            text = stringResource(R.string.file_changes),
+            text = "Agent Steps",
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 4.dp)
         )
-        changes.forEach { change ->
+        steps.forEach { step ->
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 1.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = change.filePath,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                if (change.additions > 0) {
-                    Text(
-                        text = "+${change.additions}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = androidx.compose.ui.graphics.Color(0xFF4CAF50),
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
+                val icon = when {
+                    step.success -> "✓"
+                    !step.success -> "✗"
+                    else -> "⋯"
                 }
-                if (change.deletions > 0) {
+                val iconColor = when {
+                    step.success -> androidx.compose.ui.graphics.Color(0xFF4CAF50)
+                    !step.success -> androidx.compose.ui.graphics.Color(0xFFF44336)
+                    else -> MaterialTheme.colorScheme.primary
+                }
+                Text(
+                    text = icon,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = iconColor,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.width(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "-${change.deletions}",
+                        text = step.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (step.output.isNotBlank()) {
+                        Text(
+                            text = step.output.take(200),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                }
+                if (step.durationMs > 0) {
+                    Text(
+                        text = "${step.durationMs}ms",
                         style = MaterialTheme.typography.labelSmall,
-                        color = androidx.compose.ui.graphics.Color(0xFFF44336),
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(start = 4.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
                 }
             }
+        }
+        if (isRunning) {
+            Text(
+                text = "...",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }

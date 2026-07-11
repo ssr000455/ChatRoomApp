@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.chatroom.app.data.model.Session
 import com.chatroom.app.data.model.SessionMode
 import com.chatroom.app.terminal.TerminalSession
@@ -25,6 +26,7 @@ import com.chatroom.app.ui.screens.TerminalScreen
 import com.chatroom.app.ui.screens.UserProfileScreen
 import com.chatroom.app.viewmodel.ApiAccountViewModel
 import com.chatroom.app.viewmodel.ChatViewModel
+import com.chatroom.app.viewmodel.CodexViewModel
 import com.chatroom.app.viewmodel.IdentityViewModel
 import com.chatroom.app.viewmodel.SettingsViewModel
 import com.chatroom.app.viewmodel.UserProfileViewModel
@@ -43,6 +45,7 @@ fun AppNavigation(
     modifier: Modifier = Modifier
 ) {
     val activeSession by chatViewModel.activeSession.collectAsState()
+    val codexViewModel: CodexViewModel = viewModel()
 
     AnimatedContent(
         targetState = currentDestination,
@@ -62,6 +65,7 @@ fun AppNavigation(
                     activeSession = activeSession,
                     terminalSessions = terminalSessions,
                     chatViewModel = chatViewModel,
+                    codexViewModel = codexViewModel,
                     onToggleSidebar = onToggleSidebar
                 )
             }
@@ -98,6 +102,7 @@ private fun MainContentRouter(
     activeSession: Session?,
     terminalSessions: Map<String, TerminalSession>,
     chatViewModel: ChatViewModel,
+    codexViewModel: CodexViewModel,
     onToggleSidebar: () -> Unit
 ) {
     val isCodingAssistant = activeSession?.isCodingAssistant == true
@@ -121,6 +126,7 @@ private fun MainContentRouter(
             // Fallback to chat if terminal session not initialized
             ChatScreen(
                 viewModel = chatViewModel,
+                codexViewModel = codexViewModel,
                 onToggleSidebar = onToggleSidebar
             )
         }
@@ -132,6 +138,7 @@ private fun MainContentRouter(
     } else {
         ChatScreen(
             viewModel = chatViewModel,
+            codexViewModel = codexViewModel,
             onToggleSidebar = onToggleSidebar
         )
     }

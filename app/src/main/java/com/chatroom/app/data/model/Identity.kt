@@ -13,6 +13,11 @@ data class Identity(
     val knowledge: String = "",
     val tone: String = "",
     val extraNotes: String = "",
+    // Coding-specific fields
+    val codingStyle: String = "",
+    val preferredStack: String = "",
+    val codingExperience: String = "",
+    val preferredLanguage: String = "",
     val isActive: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 ) {
@@ -25,7 +30,11 @@ data class Identity(
         personality = personality ?: "",
         knowledge = knowledge ?: "",
         tone = tone ?: "",
-        extraNotes = extraNotes ?: ""
+        extraNotes = extraNotes ?: "",
+        codingStyle = codingStyle ?: "",
+        preferredStack = preferredStack ?: "",
+        codingExperience = codingExperience ?: "",
+        preferredLanguage = preferredLanguage ?: ""
     )
 
     fun toSystemPrompt(): String {
@@ -35,6 +44,11 @@ data class Identity(
         if (personality.isNotBlank()) parts.add("Personality: $personality")
         if (knowledge.isNotBlank()) parts.add("Knowledge domains: $knowledge")
         if (tone.isNotBlank()) parts.add("Communication style: $tone")
+        // Coding-specific traits
+        if (codingStyle.isNotBlank()) parts.add("Coding style: $codingStyle")
+        if (preferredStack.isNotBlank()) parts.add("Preferred tech stack: $preferredStack")
+        if (codingExperience.isNotBlank()) parts.add("Experience level: $codingExperience")
+        if (preferredLanguage.isNotBlank()) parts.add("Preferred programming language: $preferredLanguage")
         if (extraNotes.isNotBlank()) parts.add(extraNotes)
         return parts.joinToString("\n")
     }

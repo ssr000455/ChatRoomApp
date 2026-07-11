@@ -35,7 +35,11 @@ data class Session(
     val pendingChanges: List<FileChange> = emptyList(),
     // Access control & display
     val aiAccessLevel: AiAccessLevel = AiAccessLevel.READ_WRITE,
-    val showAiChanges: Boolean = true
+    val showAiChanges: Boolean = true,
+    // Agent session fields
+    val agentState: AgentState = AgentState(),
+    val lastBranch: String = "main",
+    val repoDir: String = ""
 ) {
     val totalTokens: Int
         get() = messages.sumOf { it.content.length / 2 }
@@ -53,6 +57,7 @@ data class Session(
     fun sanitize(): Session = copy(
         messages = (messages ?: emptyList()).map { it.sanitize() },
         pendingChanges = (pendingChanges ?: emptyList()).map { it.sanitize() },
+        agentState = agentState?.sanitize() ?: AgentState(),
         title = title ?: "New Chat",
         apiAccountId = apiAccountId ?: "",
         identityId = identityId ?: "",
@@ -62,6 +67,8 @@ data class Session(
         repoName = repoName ?: "",
         repoBranch = repoBranch ?: "main",
         localPath = localPath ?: "",
-        repoToken = repoToken ?: ""
+        repoToken = repoToken ?: "",
+        lastBranch = lastBranch ?: "main",
+        repoDir = repoDir ?: ""
     )
 }

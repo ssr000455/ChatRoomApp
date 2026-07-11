@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -197,6 +198,10 @@ private fun AddIdentityForm(onSave: (Identity) -> Unit) {
     var knowledge by remember { mutableStateOf("") }
     var tone by remember { mutableStateOf("") }
     var extraNotes by remember { mutableStateOf("") }
+    var codingStyle by remember { mutableStateOf("") }
+    var preferredStack by remember { mutableStateOf("") }
+    var codingExperience by remember { mutableStateOf("") }
+    var preferredLanguage by remember { mutableStateOf("") }
     var photoUri by remember { mutableStateOf("") }
     var photoData by remember { mutableStateOf("") }
     var emoji by remember { mutableStateOf("\uD83D\uDE0A") }
@@ -391,6 +396,79 @@ private fun AddIdentityForm(onSave: (Identity) -> Unit) {
                 .height(80.dp),
             shape = RoundedCornerShape(12.dp)
         )
+        Spacer(modifier = Modifier.height(8.dp))
+        Divider()
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.identity_coding_settings_header),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+        )
+
+        Text(
+            text = stringResource(R.string.identity_coding_style),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+        )
+        OutlinedTextField(
+            value = codingStyle,
+            onValueChange = { codingStyle = it },
+            placeholder = { Text(stringResource(R.string.identity_coding_style_hint)) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = stringResource(R.string.identity_preferred_stack),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+        )
+        OutlinedTextField(
+            value = preferredStack,
+            onValueChange = { preferredStack = it },
+            placeholder = { Text(stringResource(R.string.identity_preferred_stack_hint)) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = stringResource(R.string.identity_experience_level),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+        )
+        OutlinedTextField(
+            value = codingExperience,
+            onValueChange = { codingExperience = it },
+            placeholder = { Text(stringResource(R.string.identity_experience_level_hint)) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = stringResource(R.string.identity_preferred_language),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+        )
+        OutlinedTextField(
+            value = preferredLanguage,
+            onValueChange = { preferredLanguage = it },
+            placeholder = { Text(stringResource(R.string.identity_preferred_language_hint)) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
         Spacer(modifier = Modifier.height(12.dp))
 
         Button(
@@ -404,7 +482,11 @@ private fun AddIdentityForm(onSave: (Identity) -> Unit) {
                     personality = personality,
                     knowledge = knowledge,
                     tone = tone,
-                    extraNotes = extraNotes
+                    extraNotes = extraNotes,
+                    codingStyle = codingStyle,
+                    preferredStack = preferredStack,
+                    codingExperience = codingExperience,
+                    preferredLanguage = preferredLanguage
                 ))
             },
             enabled = name.isNotBlank(),
@@ -517,7 +599,12 @@ private fun IdentityCard(
             if (identity.personality.isNotBlank()) addAll(identity.personality.split(",").map { it.trim() }.take(3))
             if (identity.tone.isNotBlank()) add(identity.tone.split(",").first().trim())
         }
-        if (tags.isNotEmpty()) {
+        val codingTags = mutableListOf<String>().apply {
+            if (identity.preferredLanguage.isNotBlank()) add(identity.preferredLanguage)
+            if (identity.codingStyle.isNotBlank()) add(identity.codingStyle.split(",").first().trim())
+            if (identity.codingExperience.isNotBlank()) add(identity.codingExperience)
+        }
+        if (tags.isNotEmpty() || codingTags.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 tags.take(3).forEach { tag ->
@@ -526,6 +613,16 @@ private fun IdentityCard(
                         label = { Text(tag, style = MaterialTheme.typography.labelSmall) },
                         colors = SuggestionChipDefaults.suggestionChipColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                        ),
+                        border = null
+                    )
+                }
+                codingTags.take(3).forEach { tag ->
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text(tag, style = MaterialTheme.typography.labelSmall) },
+                        colors = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
                         ),
                         border = null
                     )

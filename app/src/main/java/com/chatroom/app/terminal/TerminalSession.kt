@@ -7,7 +7,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import java.io.BufferedReader
 import java.io.File
+import java.io.InputStreamReader
+import java.util.LinkedList
 
 class TerminalSession(
     private val context: Context,
@@ -25,9 +28,16 @@ class TerminalSession(
     private val _installProgress = MutableStateFlow("")
     val installProgress: StateFlow<String> = _installProgress.asStateFlow()
 
+    // Command history tracking (for AI agent)
+    private val commandHistory = LinkedList<CommandRecord>()
+    val history: List<CommandRecord> get() = commandHistory.toList()
+
     private var termuxSession: com.termux.terminal.TerminalSession? = null
 
     private val toolchain = ToolchainInstaller(context.filesDir)
+
+    // Terminal history persistence
+    private var terminalHistory: TerminalHistory? = null
 
     fun start(workingDir: String = File.separator) {
         _workingDirectory = workingDir
@@ -35,6 +45,13 @@ class TerminalSession(
         _isReady.value = toolchain.isBusyboxInstalled()
         try { File(workingDir).mkdirs() } catch (_: Exception) {}
         Log.d(tag, "Terminal session initialized at $workingDir, ready=${_isReady.value}")
+    }
+
+    /**
+     * Initialize terminal history for a session.
+     */
+    fun initHistory(baseDir: File, sessionId: String) {
+        terminalHistory = TerminalHistory(baseDir).also { it.init(sessionId) }
     }
 
     fun getOrCreateSession(): com.termux.terminal.TerminalSession {
@@ -101,6 +118,76 @@ class TerminalSession(
         return ok
     }
 
+    /**
+     * Write a command to the PTY terminal (so it appears in the interactive terminal).
+     * This is used for "AI inject terminal" mode - commands appear as if user typed them.
+     */
+    fun writeToPty(command: String) {
+        val session = termuxSession ?: return
+        val cmdBytes = (command + "\n").toByteArray()
+        session.write(cmdBytes, 0, cmdBytes.size)
+        recordCommand(command, "PTY")
+        terminalHistory?.recordCommand(command, _workingDirectory)
+        terminalHistory?.append("> $command")
+        Log.d(tag, "PTY write: $command")
+    }
+
+    /**
+     * Write arbitrary bytes to the PTY (for Ctrl+C etc).
+     */
+    fun writeBytes(data: ByteArray) {
+        val session = termuxSession ?: return
+        session.write(data, 0, data.size)
+    }
+
+    /**
+     * Send Ctrl+C to the terminal.
+     */
+    fun sendCtrlC() {
+        writeBytes(byteArrayOf(0x03))
+    }
+
+    /**
+     * Execute a command programmatically (subprocess, non-PTY) and capture output.
+     * Returns the full output as a string.
+     */
+    suspend fun executeCommand(command: String): CommandResult = withContext(Dispatchers.IO) {
+        try {
+            val shell = if (File("/system/bin/sh").exists()) "/system/bin/sh" else "sh"
+            val pb = ProcessBuilder(arrayListOf(shell, "-c", command))
+                .directory(File(_workingDirectory))
+                .redirectErrorStream(true)
+
+            val proc = pb.start()
+            val reader = BufferedReader(InputStreamReader(proc.inputStream))
+            val output = StringBuilder()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                output.appendLine(line)
+            }
+            val exitCode = proc.waitFor()
+            val resultStr = output.toString()
+
+            recordCommand(command, exitCode)
+            terminalHistory?.recordCommand(command, _workingDirectory)
+            terminalHistory?.append(resultStr)
+
+            Log.d(tag, "Executed: $command -> exit $exitCode (${resultStr.length} chars)")
+            CommandResult(command = command, output = resultStr, exitCode = exitCode)
+        } catch (e: Exception) {
+            Log.e(tag, "Command execution failed: $command", e)
+            CommandResult(command = command, output = "Error: ${e.message}", exitCode = -1)
+        }
+    }
+
+    /**
+     * Update the working directory for programmatic execution.
+     */
+    fun updateWorkingDirectory(dir: String) {
+        _workingDirectory = dir
+        Log.d(tag, "Working directory updated to $dir")
+    }
+
     fun stop() {
         termuxSession?.finishIfRunning()
         termuxSession = null
@@ -109,4 +196,49 @@ class TerminalSession(
     }
 
     fun isRunning(): Boolean = termuxSession?.isRunning ?: false
+
+    /**
+     * Get the terminal history persistence instance.
+     */
+    fun getTerminalHistory(): TerminalHistory? = terminalHistory
+
+    // ── Private helpers ──
+
+    private fun recordCommand(command: String, exitCode: Int) {
+        synchronized(commandHistory) {
+            commandHistory.addLast(CommandRecord(command = command, exitCode = exitCode, timestamp = System.currentTimeMillis()))
+            if (commandHistory.size > 200) {
+                commandHistory.removeFirst()
+            }
+        }
+    }
+
+    private fun recordCommand(command: String, mode: String) {
+        synchronized(commandHistory) {
+            commandHistory.addLast(CommandRecord(command = command, mode = mode, timestamp = System.currentTimeMillis()))
+            if (commandHistory.size > 200) {
+                commandHistory.removeFirst()
+            }
+        }
+    }
 }
+
+/**
+ * Record of a command execution in the terminal.
+ */
+data class CommandRecord(
+    val command: String,
+    val output: String = "",
+    val exitCode: Int = 0,
+    val mode: String = "pty", // "pty" or "programmatic"
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+/**
+ * Result of a programmatic command execution.
+ */
+data class CommandResult(
+    val command: String,
+    val output: String,
+    val exitCode: Int
+)

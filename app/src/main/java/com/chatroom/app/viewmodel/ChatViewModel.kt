@@ -44,7 +44,8 @@ data class ChatUiState(
     val editableSystemPrompt: String = "",
     val selectedSessionIds: Set<String> = emptySet(),
     val shareAccountInfo: Boolean = false,
-    val referencedContent: String? = null
+    val referencedContent: String? = null,
+    val selectedFilePath: String? = null
 )
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
@@ -127,6 +128,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         repoToken: String = ""
     ) {
         viewModelScope.launch {
+            // Use active identity's system prompt for coding context
+            val identity = identityRepo.activeIdentity.first()
+            val effectivePrompt = if (identity != null) {
+                val identityPrompt = identity.toSystemPrompt()
+                if (identityPrompt.isNotBlank()) "$identityPrompt\n\n$systemPrompt"
+                else systemPrompt
+            } else {
+                systemPrompt
+            }
+
             // Calculate session index and storage path
             val currentCount = sessions.value.count { it.isCodingAssistant }
             val sessionIndex = currentCount + 1
@@ -137,7 +148,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 type = SessionType.CODING_ASSISTANT,
                 mode = SessionMode.REPO_HOME,
                 apiAccountId = apiAccountId,
-                systemPrompt = systemPrompt,
+                identityId = identity?.id ?: "",
+                systemPrompt = effectivePrompt,
                 repoUrl = repoUrl,
                 repoOwner = repoOwner,
                 repoName = repoName,
@@ -252,7 +264,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.value = _uiState.value.copy(
                 inputText = "", isSending = true, error = null,
                 thinkingElapsed = 0, searchSources = emptyList(),
-                referencedContent = null
+                referencedContent = null,
+                selectedFilePath = null
             )
 
             // Start elapsed time counter
@@ -537,6 +550,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.value = _uiState.value.copy(referencedContent = null)
     }
 
+    /**
+     * Set a file to be referenced in the next message.
+     * Shows a gray bar above the input and injects file content as context.
+     */
+    fun setSelectedFile(filePath: String) {
+        _uiState.value = _uiState.value.copy(selectedFilePath = filePath)
+    }
+
+    fun clearSelectedFile() {
+        _uiState.value = _uiState.value.copy(selectedFilePath = null, referencedContent = null)
+    }
+
     fun stopSending() {
         sendJob?.cancel()
         sendJob = null
@@ -699,6 +724,34 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 role = "system",
                 content = "The user is referring to the following message:\n\"$referenced\""
             ))
+        }
+
+        // Inject selected file content — user chose a file to reference in their prompt
+        val selectedFile = _uiState.value.selectedFilePath
+        if (!selectedFile.isNullOrBlank()) {
+            val session = activeSession.first()
+            val repoDir = if (session?.repoDir?.isNotBlank() == true) java.io.File(session.repoDir)
+                else if (session?.localPath?.isNotBlank() == true && session?.repoName?.isNotBlank() == true)
+                    java.io.File(session.localPath, session.repoName)
+                else null
+            if (repoDir != null) {
+                val file = repoDir.resolve(selectedFile)
+                if (file.exists() && file.isFile && file.length() < 512_000) {
+                    try {
+                        val fileContent = file.readText()
+                        val summary = fileContent.take(15000)
+                        result.add(ChatMessage(
+                            role = "system",
+                            content = "The user has selected the file `$selectedFile` for reference. Here is its content:\n\n```\n$summary\n```\n\nThe user will now ask you to modify or analyze this file."
+                        ))
+                    } catch (_: Exception) {}
+                } else {
+                    result.add(ChatMessage(
+                        role = "system",
+                        content = "The user has selected the file `$selectedFile` but it could not be read."
+                    ))
+                }
+            }
         }
 
         // Inject recent messages from selected sessions

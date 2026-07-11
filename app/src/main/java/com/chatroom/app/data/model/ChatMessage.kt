@@ -12,7 +12,14 @@ data class ChatMessage(
     val reasoningContent: String? = null,
     // Coding assistant display fields
     val terminalCommands: List<TerminalCommand> = emptyList(),
-    val fileChanges: List<FileChangeSummary> = emptyList()
+    val fileChanges: List<FileChangeSummary> = emptyList(),
+    // Agent execution fields
+    val agentActions: List<AgentActionDisplay> = emptyList(),
+    val executionSteps: List<ExecutionStep> = emptyList(),
+    // Agent loop context
+    val agentState: AgentState? = null,
+    val isAgentMessage: Boolean = false,
+    val agentRound: Int = 0
 ) {
     /**
      * Sanitize after Gson deserialization: null lists -> empty lists, null Strings -> defaults.
@@ -21,10 +28,36 @@ data class ChatMessage(
         attachments = (attachments ?: emptyList()).map { it.sanitize() },
         terminalCommands = (terminalCommands ?: emptyList()).map { it.sanitize() },
         fileChanges = fileChanges ?: emptyList(),
+        agentActions = agentActions ?: emptyList(),
+        executionSteps = executionSteps ?: emptyList(),
+        agentState = agentState?.sanitize(),
         role = role ?: "assistant",
         content = content ?: ""
     )
 }
+
+/**
+ * Display model for an AI agent action shown in chat bubbles.
+ */
+data class AgentActionDisplay(
+    val type: String, // "read", "write", "command", "plan", "think", "complete"
+    val description: String,
+    val path: String = "",
+    val status: String = "pending" // "pending", "running", "done", "error"
+)
+
+/**
+ * Execution step result shown in chat.
+ */
+data class ExecutionStep(
+    val stepNumber: Int,
+    val actionType: String,
+    val description: String,
+    val output: String = "",
+    val exitCode: Int? = null,
+    val success: Boolean = true,
+    val durationMs: Long = 0
+)
 
 data class Attachment(
     val name: String,

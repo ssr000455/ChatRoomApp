@@ -228,6 +228,7 @@
     <string name="messages_count">%d 則訊息</string>
     <string name="scroll_to_bottom">捲動到底部</string>
     <string name="remove_reference">移除引用</string>
+    <string name="remove_file_reference">移除檔案引用</string>
 
     <!-- AI Access Level -->
     <string name="access_read_only">唯讀</string>
@@ -290,5 +291,61 @@
     <!-- Translate Language Labels -->
     <string name="translate_lang_zh_cn">简体中文</string>
     <string name="translate_lang_zh_tw">繁體中文</string>
-    <string name="translate_lang_en">English</string>
+    <string name="translate_lang_en">英文</string>
+
+    <!-- Identity Coding Assistant Settings -->
+    <string name="identity_coding_settings_header">程式碼助手設定</string>
+    <string name="identity_coding_style">編碼風格</string>
+    <string name="identity_coding_style_hint">例如 整潔程式碼、函數式、極簡</string>
+    <string name="identity_preferred_stack">偏好的技術堆疊</string>
+    <string name="identity_preferred_stack_hint">例如 Spring Boot + React, Flutter, Go + Vue</string>
+    <string name="identity_experience_level">經驗程度</string>
+    <string name="identity_experience_level_hint">例如 高級、初級、架構師</string>
+    <string name="identity_preferred_language">偏好的程式語言</string>
+    <string name="identity_preferred_language_hint">例如 Kotlin, TypeScript, Python, Rust</string>
+
+    <!-- Dev Tools -->
+    <string name="dev_tools_title">🛠 開發工具</string>
+    <string name="dev_tools_select_tool">選擇工具：</string>
+    <string name="dev_tools_execute">執行 %s</string>
+    <string name="dev_tool_search_code">程式碼搜尋</string>
+    <string name="dev_tool_search_code_desc">在整個倉庫中搜尋程式碼</string>
+    <string name="dev_tool_explain_code">程式碼解釋</string>
+    <string name="dev_tool_explain_code_desc">讓 AI 解釋選中的程式碼區塊</string>
+    <string name="dev_tool_perf_analysis">效能分析</string>
+    <string name="dev_tool_perf_analysis_desc">分析程式碼的效能瓶頸</string>
+    <string name="dev_tool_security_audit">安全稽核</string>
+    <string name="dev_tool_security_audit_desc">稽核程式碼的安全漏洞</string>
+    <string name="dev_tool_api_debug">API 除錯</string>
+    <string name="dev_tool_api_debug_desc">除錯 API 請求和響應</string>
+    <string name="dev_tool_search_query">搜尋查詢</string>
+    <string name="dev_tool_search_query_hint">例如 函數名、類別名、錯誤模式…</string>
+    <string name="dev_tool_file_filter">檔案過濾（可選）</string>
+    <string name="dev_tool_file_filter_hint">例如 *.kt, *.js, *.py</string>
+    <string name="dev_tool_file_path">檔案路徑</string>
+    <string name="dev_tool_file_path_hint">例如 src/App.tsx</string>
+    <string name="dev_tool_code_input">程式碼（留空則從檔案讀取）</string>
+    <string name="dev_tool_method">方法</string>
+    <string name="dev_tool_url">URL</string>
+    <string name="dev_tool_response_status">響應狀態（可選）</string>
+    <string name="dev_tool_response_status_hint">例如 500, 403, 404</string>
+    <string name="dev_tool_request_body">請求主體（可選）</string>
+    <string name="dev_tool_response_body">響應主體（可選）</string>
+    <string name="dev_tool_error_message">錯誤訊息（可選）</string>
+
+    <!-- Dangerous Command Dialog -->
+    <string name="dangerous_command_title">確認指令</string>
+    <string name="dangerous_command_desc">此指令可能有風險：</string>
+    <string name="dangerous_allow">允許</string>
+    <string name="dangerous_deny">拒絕</string>
+
+    <!-- Dev Tool Result -->
+    <string name="dev_tool_result_title">結果</string>
+    <string name="dev_tool_result_clear">清除</string>
+
+    <!-- File Preview Dialog -->
+    <string name="select_for_chat">選擇加入對話</string>
+    <string name="select_file">選擇檔案</string>
+    <string name="copy_api_key">複製 API 金鑰</string>
+    <string name="command_history">指令歷史</string>
 </resources>
