@@ -34,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.chatroom.app.R
 import com.chatroom.app.terminal.TerminalSession
+import kotlinx.coroutines.launch
 
 @Composable
 fun TerminalScreen(
@@ -60,6 +62,7 @@ fun TerminalScreen(
     var terminalView by remember { mutableStateOf<com.termux.view.TerminalView?>(null) }
     var terminalError by remember { mutableStateOf<String?>(null) }
     var showHistory by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     // Auto-install toolchain if not ready
     LaunchedEffect(Unit) {
@@ -181,7 +184,7 @@ fun TerminalScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     TextButton(onClick = {
                         terminalError = null
-                        terminalSession.installToolchain()
+                        scope.launch { terminalSession.installToolchain() }
                     }) {
                         Text(stringResource(R.string.retry), color = promptColor)
                     }
