@@ -250,7 +250,7 @@ class CodexViewModel(application: Application) : AndroidViewModel(application) {
                 sessionRepo.addMessageToSession(session.id, updatedAgentMsg)
 
                 // Update session agent state
-                val updatedSession = activeSession.first() ?: return@loop
+                val updatedSession = activeSession.first() ?: return@launch
                 sessionRepo.updateSession(updatedSession.copy(
                     agentState = session.agentState.copy(
                         isActive = false,

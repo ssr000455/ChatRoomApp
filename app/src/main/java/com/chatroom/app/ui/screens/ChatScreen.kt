@@ -1152,8 +1152,7 @@ fun ChatScreen(
     }
 
     // Dangerous command confirmation dialog (agent mode)
-    if (codexUiState?.confirmDialog != null) {
-        val dialog = codexUiState!!.confirmDialog
+    codexUiState?.confirmDialog?.let { dialog ->
         AlertDialog(
             onDismissRequest = { codexViewModel?.rejectCommand() },
             title = { Text(stringResource(R.string.dangerous_command_title)) },
