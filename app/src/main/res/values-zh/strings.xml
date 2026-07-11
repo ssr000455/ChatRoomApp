@@ -348,4 +348,5 @@
     <string name="select_file">选择文件</string>
     <string name="copy_api_key">复制 API 密钥</string>
     <string name="command_history">命令历史</string>
+    <string name="retry">重试</string>
 </resources>

@@ -58,6 +58,7 @@ fun TerminalScreen(
     val isReady by terminalSession.isReady.collectAsState()
     val installProgress by terminalSession.installProgress.collectAsState()
     var terminalView by remember { mutableStateOf<com.termux.view.TerminalView?>(null) }
+    var terminalError by remember { mutableStateOf<String?>(null) }
     var showHistory by remember { mutableStateOf(false) }
 
     // Auto-install toolchain if not ready
@@ -158,8 +159,8 @@ fun TerminalScreen(
             }
         }
 
-        if (!isReady) {
-            // Toolchain install progress
+        if (!isReady || terminalError != null) {
+            // Toolchain install progress or error state
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -168,29 +169,56 @@ fun TerminalScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(
-                    text = stringResource(R.string.terminal_installing_toolchain),
-                    style = TextStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 14.sp,
-                        color = textColor
+                if (terminalError != null) {
+                    Text(
+                        text = terminalError ?: "",
+                        style = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 14.sp,
+                            color = Color(0xFFF44747)
+                        )
                     )
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth(0.8f),
-                    color = promptColor,
-                    trackColor = Color(0xFF2D2D2D)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = installProgress.ifEmpty { "..." },
-                    style = TextStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp,
-                        color = textColor.copy(alpha = 0.6f)
-                    )
-                )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = {
+                        terminalError = null
+                        terminalSession.installToolchain()
+                    }) {
+                        Text(stringResource(R.string.retry), color = promptColor)
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.terminal_installing_toolchain),
+                            style = TextStyle(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 14.sp,
+                                color = textColor
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth(0.8f),
+                            color = promptColor,
+                            trackColor = Color(0xFF2D2D2D)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = installProgress.ifEmpty { "..." },
+                            style = TextStyle(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.sp,
+                                color = textColor.copy(alpha = 0.6f)
+                            )
+                        )
+                    }
+                }
             }
         } else {
             // Termux TerminalView - full terminal emulation
@@ -201,44 +229,51 @@ fun TerminalScreen(
             ) {
                 AndroidView(
                     factory = { ctx ->
-                        com.termux.view.TerminalView(ctx, null).apply {
-                            setTextSize(12)
-                            setTerminalViewClient(object : com.termux.view.TerminalViewClient {
-                                override fun onSingleTapUp(e: android.view.MotionEvent?) {}
-                                override fun onScale(scale: Float): Float = scale
-                                override fun onLongPress(e: android.view.MotionEvent?): Boolean = false
-                                override fun isTerminalViewSelected(): Boolean = true
-                                override fun shouldEnforceCharBasedInput(): Boolean = false
-                                override fun shouldBackButtonBeMappedToEscape(): Boolean = false
-                                override fun shouldUseCtrlSpaceWorkaround(): Boolean = false
-                                override fun readControlKey(): Boolean = false
-                                override fun readAltKey(): Boolean = false
-                                override fun readShiftKey(): Boolean = false
-                                override fun readFnKey(): Boolean = false
-                                override fun onKeyDown(keyCode: Int, e: android.view.KeyEvent?, session: com.termux.terminal.TerminalSession?): Boolean = false
-                                override fun onKeyUp(keyCode: Int, e: android.view.KeyEvent?): Boolean = false
-                                override fun onCodePoint(codePoint: Int, ctrlDown: Boolean, session: com.termux.terminal.TerminalSession?): Boolean = false
-                                override fun onEmulatorSet() {}
-                                override fun copyModeChanged(isCopyMode: Boolean) {}
-                                override fun logInfo(tag: String?, message: String?) { android.util.Log.i(tag ?: "TerminalView", message ?: "") }
-                                override fun logError(tag: String?, message: String?) { android.util.Log.e(tag ?: "TerminalView", message ?: "") }
-                                override fun logWarn(tag: String?, message: String?) { android.util.Log.w(tag ?: "TerminalView", message ?: "") }
-                                override fun logDebug(tag: String?, message: String?) { android.util.Log.d(tag ?: "TerminalView", message ?: "") }
-                                override fun logVerbose(tag: String?, message: String?) { android.util.Log.v(tag ?: "TerminalView", message ?: "") }
-                                override fun logStackTraceWithMessage(tag: String?, message: String?, e: java.lang.Exception?) { android.util.Log.e(tag ?: "TerminalView", message ?: "", e) }
-                                override fun logStackTrace(tag: String?, e: java.lang.Exception?) { android.util.Log.e(tag ?: "TerminalView", "", e) }
-                            })
-                            val session = terminalSession.getOrCreateSession()
-                            attachSession(session)
-                            isFocusable = true
-                            isFocusableInTouchMode = true
-                            terminalView = this
-                            // Post to ensure view is laid out before focus request
-                            post {
-                                requestFocus()
-                                val imm = ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-                                imm?.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
+                        try {
+                            com.termux.view.TerminalView(ctx, null).apply {
+                                setTextSize(12)
+                                setTerminalViewClient(object : com.termux.view.TerminalViewClient {
+                                    override fun onSingleTapUp(e: android.view.MotionEvent?) {}
+                                    override fun onScale(scale: Float): Float = scale
+                                    override fun onLongPress(e: android.view.MotionEvent?): Boolean = false
+                                    override fun isTerminalViewSelected(): Boolean = true
+                                    override fun shouldEnforceCharBasedInput(): Boolean = false
+                                    override fun shouldBackButtonBeMappedToEscape(): Boolean = false
+                                    override fun shouldUseCtrlSpaceWorkaround(): Boolean = false
+                                    override fun readControlKey(): Boolean = false
+                                    override fun readAltKey(): Boolean = false
+                                    override fun readShiftKey(): Boolean = false
+                                    override fun readFnKey(): Boolean = false
+                                    override fun onKeyDown(keyCode: Int, e: android.view.KeyEvent?, session: com.termux.terminal.TerminalSession?): Boolean = false
+                                    override fun onKeyUp(keyCode: Int, e: android.view.KeyEvent?): Boolean = false
+                                    override fun onCodePoint(codePoint: Int, ctrlDown: Boolean, session: com.termux.terminal.TerminalSession?): Boolean = false
+                                    override fun onEmulatorSet() {}
+                                    override fun copyModeChanged(isCopyMode: Boolean) {}
+                                    override fun logInfo(tag: String?, message: String?) { android.util.Log.i(tag ?: "TerminalView", message ?: "") }
+                                    override fun logError(tag: String?, message: String?) { android.util.Log.e(tag ?: "TerminalView", message ?: "") }
+                                    override fun logWarn(tag: String?, message: String?) { android.util.Log.w(tag ?: "TerminalView", message ?: "") }
+                                    override fun logDebug(tag: String?, message: String?) { android.util.Log.d(tag ?: "TerminalView", message ?: "") }
+                                    override fun logVerbose(tag: String?, message: String?) { android.util.Log.v(tag ?: "TerminalView", message ?: "") }
+                                    override fun logStackTraceWithMessage(tag: String?, message: String?, e: java.lang.Exception?) { android.util.Log.e(tag ?: "TerminalView", message ?: "", e) }
+                                    override fun logStackTrace(tag: String?, e: java.lang.Exception?) { android.util.Log.e(tag ?: "TerminalView", "", e) }
+                                })
+                                val session = terminalSession.getOrCreateSession()
+                                attachSession(session)
+                                isFocusable = true
+                                isFocusableInTouchMode = true
+                                terminalView = this
+                                // Post to ensure view is laid out before focus request
+                                post {
+                                    requestFocus()
+                                    val imm = ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                                    imm?.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
+                                }
                             }
+                        } catch (e: Exception) {
+                            android.util.Log.e("TerminalScreen", "Failed to create terminal", e)
+                            terminalError = "Terminal init failed: ${e.localizedMessage ?: e.message}"
+                            // Return a dummy view so AndroidView doesn't crash
+                            android.view.View(ctx).apply { setBackgroundColor(0xFF1E1E1E.toInt()) }
                         }
                     },
                     onRelease = {

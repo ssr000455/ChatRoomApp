@@ -348,4 +348,5 @@
     <string name="select_file">Select file</string>
     <string name="copy_api_key">Copy API Key</string>
     <string name="command_history">Command History</string>
+    <string name="retry">Retry</string>
 </resources>
